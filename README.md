@@ -19,8 +19,8 @@ Positionnement : le jeu est clairement antifasciste.
 Cœur du jeu : « avant tout un jeu sur comment monter une équipe ». Le shooter est la couche d'action ; la construction d'une équipe (un équipage) est le sujet central.
 2. Décisions prises
 Sujet	Décision
-Plateforme	Android (smartphones) en priorité, puis navigateur web sur PC avec webcam en deuxième backend. Pas Steam.
-Langage	Kotlin, en Kotlin Multiplatform (KMP) pour partager la logique entre Android et web
+Plateforme	Android (smartphones) en priorité, puis navigateur web sur PC avec webcam et iOS. Ordre entre web et iOS [À CONFIRMER]. Pas Steam.
+Langage	Kotlin (JVM), une seule base de code partagée entre Android, iOS et web via libGDX
 Ambiance	Reggae dub, univers de pirates, positionnement clairement antifasciste, question de la violence posée (voir section 1 bis)
 Sujet central	Monter une équipe (un équipage) ; le shooter en est la couche d'action
 Modes d'interaction	Au choix du joueur : capture de mouvement, écran tactile, clavier, manette. Le gameplay ne dépend d'aucun mode en particulier.
@@ -29,33 +29,64 @@ Exécution du modèle	En local sur l'appareil, de préférence sur NPU
 Niveaux	Générés procéduralement, à partir de blocs réutilisables
 Ennemis	Chaque ennemi est un agent (percepts → décision → action), avec un comportement propre à sa nature
 Assets 3D	Plutôt sprites pré-rendus depuis des modèles 3D (rendu 2D dans un moteur 2D) [À CONFIRMER]
-Moteur de jeu : Kotlin natif avec libGDX
-Android + iOS
+Moteur de jeu	libGDX en Kotlin. Lanceurs : Android, iOS (MobiVM, fork maintenu de RoboVM), web (TeaVM via gdx-teavm), desktop LWJGL3 pour le développement
+Backend web	TeaVM plutôt que Kotlin/JS ou Kotlin/Wasm : le backend GWT de libGDX n'accepte pas Kotlin, TeaVM compile le bytecode JVM (Kotlin compris) en JS ou Wasm
 
 4. Architecture cible
 
-Modules Gradle indépendants. Le gameplay et les gestes ne dépendent pas d'Android pour rester testables sur PC.
+Modules Gradle indépendants. Le gameplay et les gestes ne dépendent ni d'Android, ni d'iOS, ni de libGDX pour rester testables sur PC.
 
-:input       GameInput, InputSource, sélection et bascule du mode (Kotlin pur)
-:camera      capture caméra (Android : CameraX ; web : getUserMedia), basse résolution, miroir/rotation
-:pose        prétraitement et suivi de ROI (partagés) ; exécution du modèle ONNX (Android : ONNX Runtime ; web : onnxruntime-web)
-:gestures    joints → GameInput (Kotlin pur, filtre One Euro)
-:levelgen    blocs, générateur procédural, validation (Kotlin pur)
-:agents      percepts, décision, comportements ennemis (Kotlin pur)
-:game        rendu, boucle de jeu, physique, audio
+```
+hammerAndPlanks/
+├── settings.gradle.kts, build.gradle.kts
+├── gradle/libs.versions.toml     versions centralisées
+├── build-logic/                  conventions Gradle (module Kotlin pur, Android, tests)
+│
+├── input/      Kotlin pur : GameInput, InputSource, InputMode, routeur avec hot-swap
+├── camera/     Kotlin pur : interfaces CameraSource, CameraFrame
+├── pose/       Kotlin pur : PoseSource, prétraitement (crop 1,2×, cliff_cond),
+│               suivi de ROI, squelette MHR70, ReplayPoseSource, interface PoseModel
+├── gestures/   Kotlin pur : filtre One Euro, normalisation morphologique, MotionInputSource
+├── levelgen/   Kotlin pur : blocs (JSON), générateur à graine, validateur
+├── agents/     Kotlin pur : Agent, Percepts, Intent, FSM / arbres / utility AI / boids
+├── game/       cœur libGDX : boucle, écrans, rendu sprites, physique, audio, i18n
+│
+├── platform/
+│   ├── android/   lanceur, CameraX, ONNX Runtime (QNN puis CPU/XNNPACK), KeyEvent/MotionEvent
+│   ├── ios/       lanceur MobiVM, AVFoundation, ONNX Runtime (CoreML execution provider)
+│   ├── web/       lanceur TeaVM, getUserMedia, onnxruntime-web, Gamepad API
+│   └── desktop/   lanceur LWJGL3 pour le dev : webcam, rejeu de sessions, clavier
+│
+├── tools/
+│   ├── pose-golden/   test de parité Python ↔ Kotlin sur des images de référence
+│   ├── pose-bench/    mesures par appareil, provider et précision
+│   └── level-viewer/  visualiser un niveau à partir d'une graine
+├── assets/       sprites, sprite sheets, audio, fichiers i18n fr/en
+├── assets-src/   fichiers .blend et scripts de rendu Blender
+└── models/       instanthmr.onnx, non versionné (licence SAM), téléchargé par une tâche Gradle
+```
 
-Flux en mode mocap : Caméra → ROI → InstantHMR (NPU) → joints 3D → lissage + gestes → GameInput → jeu. Flux en mode clavier ou manette : événements Android (KeyEvent, MotionEvent joystick) → mapping → GameInput → jeu. Flux en mode tactile : MotionEvent (toucher) → mapping → GameInput → jeu.
+Règles de dépendance :
 
-Cibles et partage de code (Kotlin Multiplatform)
+- :game ne dépend que de :input, :levelgen et :agents. Il ne connaît ni la caméra, ni la pose, ni les gestes.
+- La chaîne mocap :camera → :pose → :gestures → :input n'est assemblée que par les lanceurs de plateforme, et seulement si le joueur choisit ce mode.
+- Les modules Kotlin purs n'ont aucune dépendance à Android, iOS ou libGDX. TeaVM et MobiVM les compilent tels quels.
+- Les agents reçoivent une vue du monde (WorldView), jamais l'état du jeu ni le mode d'entrée.
 
-Deux cibles : Android (priorité) et navigateur web sur PC avec webcam (deuxième backend, utile pour des démonstrations sans installation). La logique est écrite une seule fois en Kotlin et compilée pour les deux.
+Flux en mode mocap : Caméra → ROI → InstantHMR (NPU) → joints 3D → lissage + gestes → GameInput → jeu. Flux en mode clavier ou manette : événements natifs (KeyEvent, MotionEvent joystick, GCController, Gamepad API) → mapping → GameInput → jeu. Flux en mode tactile : événements tactiles → mapping → GameInput → jeu.
 
-Code partagé (commonMain) : :gestures, :levelgen, :agents, :input (GameInput, InputSource), le prétraitement de pose et le suivi de ROI, la logique de jeu et de progression.
-Code par plateforme (mécanisme expect/actual de KMP) : capture caméra, exécution du modèle ONNX, entrées spécifiques (événements Android, Gamepad API et clavier côté web), rendu et audio selon le moteur retenu.
-Cible web : Kotlin/JS ou Kotlin/Wasm. La caméra passe par getUserMedia, l'inférence par onnxruntime-web (WebGPU ou WASM). Pas de NPU dans le navigateur. Sur un PC avec carte graphique, le GPU devrait suffire (le modèle fait environ 5 ms sur une RTX 4070), à vérifier.
-Les quatre modes d'interaction fonctionnent aussi sur le web (clavier, Gamepad API, tactile, webcam).
-Points à vérifier tôt : (1) instanthmr.onnx s'exécute-t-il dans onnxruntime-web (opérations supportées, fp16 selon navigateur et GPU) ? C'est le test le plus important, indépendant du moteur ; (2) poids du modèle à télécharger au premier lancement, puis à mettre en cache ; (3) la licence des poids (SAM) est plus exposée quand le modèle est téléchargé par le navigateur ; (4) cadrage d'une webcam de PC (joueur assis, buste).
-Ordre : stabiliser le cœur sur Android, puis ajouter le backend web.
+Cibles et partage de code (libGDX)
+
+Trois cibles : Android (priorité), iOS, et navigateur web sur PC avec webcam (utile pour des démonstrations sans installation). Un lanceur desktop LWJGL3 sert au développement. La logique est écrite une seule fois en Kotlin (JVM) et partagée par toutes les cibles.
+
+Code partagé : :input, :pose (prétraitement, ROI), :gestures, :levelgen, :agents, et :game (logique, rendu, audio via libGDX).
+Code par plateforme : modèle libGDX, interfaces dans le code partagé et implémentations injectées par chaque lanceur (pas d'expect/actual KMP). Concerne la capture caméra, l'exécution du modèle ONNX et les entrées spécifiques.
+Cible iOS : MobiVM (compilation AOT). Caméra via AVFoundation, inférence via ONNX Runtime avec le CoreML execution provider pour viser le Neural Engine. Les bindings ONNX Runtime pour MobiVM sont à écrire (Bro) : point de risque à évaluer tôt.
+Cible web : TeaVM via gdx-teavm. La caméra passe par getUserMedia, l'inférence par onnxruntime-web (WebGPU ou WASM), appelés via l'interop JS de TeaVM. Pas de NPU dans le navigateur. Sur un PC avec carte graphique, le GPU devrait suffire (le modèle fait environ 5 ms sur une RTX 4070), à vérifier.
+Les quatre modes d'interaction fonctionnent sur toutes les cibles (clavier, manette, tactile, caméra).
+Points à vérifier tôt : (1) instanthmr.onnx s'exécute-t-il dans onnxruntime-web (opérations supportées, fp16 selon navigateur et GPU) ? C'est le test le plus important ; (2) instanthmr.onnx avec le CoreML execution provider sur iPhone, et faisabilité des bindings MobiVM ; (3) poids du modèle à télécharger au premier lancement, puis à mettre en cache ; (4) la licence des poids (SAM) est plus exposée quand le modèle est téléchargé par le navigateur ; (5) cadrage d'une webcam de PC (joueur assis, buste).
+Ordre : stabiliser le cœur sur Android, puis ajouter les backends web et iOS (ordre [À CONFIRMER]).
+
 Abstraction des entrées
 
 Le jeu ne connaît que GameInput, jamais le périphérique. Chaque mode est une InputSource :
@@ -149,6 +180,7 @@ Passer à de la vraie 3D temps réel (Three.js, Unity 3D, etc.) n'est justifié 
 Les assets de l'ancien jeu Unity sont potentiellement réutilisables
 
 12. Conventions de travail avec Claude Code
-Garder :gestures, :levelgen et :agents en Kotlin pur (sans dépendance Android) pour les tester sur PC.
+Garder :input, :camera, :pose, :gestures, :levelgen et :agents en Kotlin pur (sans dépendance Android, iOS ni libGDX) pour les tester sur PC.
+Ne pas introduire dans le code partagé de bibliothèque JVM non validée sous TeaVM et MobiVM (réflexion, java.nio avancé, kotlinx.coroutines dont dépend InputSource via Flow).
 Ne pas embarquer le rendu du mesh MHR ni RF-DETR dans l'application mobile sans accord.
 Les mesures de performance doivent préciser l'appareil, le provider d'inférence et la précision numérique (fp16 ou int8).

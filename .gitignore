@@ -1,0 +1,118 @@
+# =====================================================================
+# Hammer and Planks — .gitignore
+# Stack : Kotlin / Gradle multi-modules / libGDX / Android / Web (TeaVM)
+# =====================================================================
+
+# --- Gradle -----------------------------------------------------------
+.gradle/
+build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+gradle-app.setting
+.gradletasknamecache
+# Kotlin compiler daemon / KMP caches
+.kotlin/
+kotlin-js-store/
+
+# --- Fichiers locaux / secrets ---------------------------------------
+local.properties
+*.env
+.env*
+!.env.example
+secrets.properties
+# Signature Android : ne JAMAIS committer les keystores
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+
+# --- Android ----------------------------------------------------------
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+.externalNativeBuild/
+.cxx/
+android/release/
+android/debug/
+*.hprof
+lint-results*.xml
+lint-results*.html
+
+# --- iOS (libGDX + RoboVM / MobiVM) ----------------------------------
+ios/robovm-build/
+ios/build/
+*.ipa
+*.dSYM/
+xcuserdata/
+DerivedData/
+
+# --- Web (TeaVM / Kotlin-JS / Node outillage) ------------------------
+node_modules/
+web/dist/
+web/build/
+.npm/
+npm-debug.log*
+yarn-error.log*
+# Playwright (tests E2E du backend web)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# --- IDE --------------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.fleet/
+.project
+.classpath
+.settings/
+bin/
+
+# --- Modèles de pose (InstantHMR / ONNX) -----------------------------
+# Les poids sont sous licence SAM et volumineux : pas dans le dépôt.
+# Ils sont téléchargés par un script ou une tâche Gradle (voir README).
+*.onnx
+*.ort
+*.tflite
+*.pt
+*.pth
+*.safetensors
+/models/*
+!/models/README.md
+!/models/checksums.txt
+
+# --- Données de dev ---------------------------------------------------
+# Sessions de poses enregistrées localement (garder seulement les fixtures de test)
+/recordings/
+/pose-sessions/
+# Rapports de benchmark locaux
+benchmarks/results/
+
+# --- Assets / Blender -------------------------------------------------
+*.blend1
+*.blend2
+*.blend@
+# Sorties générées par le pipeline Blender → sprite sheets
+assets-src/**/render/
+# Fichier généré par la tâche libGDX de listing des assets
+assets/assets.txt
+
+# --- Logs, temporaires, OS -------------------------------------------
+*.log
+*.tmp
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Claude Code (réglages locaux) -----------------------------------
+.claude/settings.local.json
