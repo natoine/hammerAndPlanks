@@ -26,7 +26,7 @@ object WebLauncher {
 
             override fun onInputModeChanged(announcement: String) = announce(announcement)
 
-            override fun onBoatMoved(offset: Float) = reportBoatOffset(offset)
+            override fun onBoatMoved(offset: Float, headingDeg: Float) = reportBoatOffset(offset, headingDeg)
 
             // Réglages de contrôle par l'URL, en attendant un menu d'options : ?control=velocity&speed=0.5
             override val forcedControlMode: String? = urlParameter("control")

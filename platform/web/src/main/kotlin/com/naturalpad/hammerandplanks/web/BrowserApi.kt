@@ -40,9 +40,13 @@ external fun cameraStop()
 )
 external fun cameraPlace(left: Float, top: Float, width: Float, height: Float)
 
-/** Position du bateau exposée sur le canvas (data-boat-offset) pour les tests d'interface. */
-@JSBody(params = ["offset"], script = "if (document.getElementById('canvas')) { document.getElementById('canvas').dataset.boatOffset = offset.toFixed(3); }")
-external fun reportBoatOffset(offset: Float)
+/** Position et cap du bateau exposés sur le canvas (data-boat-offset, data-boat-heading) pour les tests d'interface. */
+@JSBody(
+    params = ["offset", "heading"],
+    script = "if (document.getElementById('canvas')) { document.getElementById('canvas').dataset.boatOffset = offset.toFixed(3);" +
+        " document.getElementById('canvas').dataset.boatHeading = heading.toFixed(1); }",
+)
+external fun reportBoatOffset(offset: Float, heading: Float)
 
 /** Paramètre de l'URL de la page (ex. ?control=velocity&speed=0.5), ou null. */
 @JSBody(params = ["name"], script = "return new URLSearchParams(window.location.search).get(name);")

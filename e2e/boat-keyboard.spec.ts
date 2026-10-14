@@ -118,6 +118,20 @@ test('un facteur de vitesse nul immobilise le bateau', async ({ page }) => {
   expect(await offset(page)).toBe(0);
 });
 
+test('la proue s’oriente progressivement vers la direction prise, puis se redresse', async ({ page }) => {
+  // Retour au centre puis redressement : environ 3 s de jeu, beaucoup plus en temps réel quand le rendu
+  // logiciel des tests parallèles tombe à une ou deux images par seconde (pas de jeu plafonné à 0,1 s).
+  test.setTimeout(120_000);
+  await open(page);
+  const heading = async () => Number((await page.locator('#canvas').getAttribute('data-boat-heading')) ?? 'NaN');
+  await page.keyboard.down('ArrowLeft');
+  await expect.poll(heading, { timeout: 20_000 }).toBeGreaterThan(5);   // vers la gauche : cap positif
+  await expect.poll(heading, { timeout: 20_000 }).toBeGreaterThan(30);  // se rapproche de la diagonale
+  expect(await heading()).toBeLessThanOrEqual(45);
+  await page.keyboard.up('ArrowLeft');
+  await expect.poll(heading, { timeout: 90_000 }).toBe(0);
+});
+
 test('les flèches ne font pas défiler la page', async ({ page }) => {
   await open(page);
   await hold(page, 'ArrowRight', 300);

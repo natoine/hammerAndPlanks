@@ -20,10 +20,10 @@ interface PlatformHooks {
     fun onInputModeChanged(announcement: String) {}
 
     /**
-     * Appelé quand le bateau change de position, avec son décalage depuis le centre en fraction de la largeur
-     * d'écran (négatif à gauche). Sert aux tests d'interface du web.
+     * Appelé quand le bateau bouge, avec son décalage depuis le centre en fraction de la largeur d'écran
+     * (négatif à gauche) et le cap de sa proue en degrés (positif vers la gauche). Sert aux tests d'interface du web.
      */
-    fun onBoatMoved(offset: Float) {}
+    fun onBoatMoved(offset: Float, headingDeg: Float) {}
 
     /**
      * Pilotage par le corps (mode caméra) : chaîne caméra → InstantHMR → gestes, assemblée par le lanceur.

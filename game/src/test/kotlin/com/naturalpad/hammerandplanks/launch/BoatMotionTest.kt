@@ -24,7 +24,7 @@ class BoatMotionTest {
 
     @Test fun `immobile au centre au depart`() {
         val m = BoatMotion()
-        assertEquals(0f, m.position); assertEquals(0f, m.velocity); assertEquals(0f, m.tiltDeg)
+        assertEquals(0f, m.position); assertEquals(0f, m.velocity); assertEquals(0f, m.headingDeg)
     }
 
     // --- Mode élan (par défaut) ---
@@ -162,20 +162,77 @@ class BoatMotionTest {
         assertEquals(0f, m.position)
     }
 
-    @Test fun `elan - rebond sur le bord`() {
-        val m = motion(MovementControlMode.MOMENTUM, speed = 1f)
-        run(m, 1f, 3f)                   // contre le bord droit, à pleine vitesse
-        assertEquals(1f, m.position)
-        val hit = BoatMotion(ControlSettings(MovementControlMode.MOMENTUM), momentum = MomentumTuning(centering = 0f, drag = 0f))
-        run(hit, 1f, 3f)
-        assertTrue(hit.velocity < 0f || hit.position < 1f, "Le bord renvoie le bateau")
+    @Test fun `elan - rebond sur le bord quand on ne pousse plus`() {
+        // Sans rappel ni frottement : le bateau lancé puis relâché file droit sur le bord et en repart.
+        val m = BoatMotion(ControlSettings(MovementControlMode.MOMENTUM), momentum = MomentumTuning(centering = 0f, drag = 0f))
+        run(m, 1f, 0.8f)
+        val speed = m.velocity
+        var firstBounce: Float? = null
+        repeat(600) { m.update(GameInput.IDLE, 1f / 60f); if (firstBounce == null && m.velocity < 0f) firstBounce = -m.velocity }
+        assertTrue(firstBounce != null, "Le bord renvoie le bateau")
+        assertEquals(speed * m.momentum.bounce, firstBounce!!, 1e-3f)
     }
 
-    @Test fun `elan - inclinaison maximale a la vitesse de pointe`() {
+    // --- Cap de la proue ---
+
+    @Test fun `cap - la proue tourne vers la gauche quand on va a gauche`() {
         val m = motion(MovementControlMode.MOMENTUM)
-        repeat(60) { m.update(GameInput(-1f), 1f / 60f) }
-        repeat(30) { m.update(GameInput(-1f), 1f / 60f) }
-        assertTrue(m.tiltDeg > m.maxTiltDeg * 0.9f || m.position == -1f)
+        run(m, -1f, 0.5f)
+        assertTrue(m.headingDeg > 0f, "Rotation antihoraire attendue : ${m.headingDeg}")
+        val n = motion(MovementControlMode.MOMENTUM)
+        run(n, 1f, 0.5f)
+        assertTrue(n.headingDeg < 0f)
+    }
+
+    @Test fun `cap - diagonale a la vitesse de pointe`() {
+        val m = motion(MovementControlMode.MOMENTUM)
+        run(m, -1f, 1.2f) // vitesse de pointe atteinte, loin du bord
+        assertEquals(-m.momentum.maxSpeed, m.velocity, 1e-4f)
+        assertEquals(45f, m.targetHeadingDeg, 0.01f)
+        run(m, -1f, 0.3f)
+        assertTrue(m.headingDeg > 40f, "Cap ${m.headingDeg}")
+    }
+
+    @Test fun `cap - proportionne a la vitesse, en suivant la direction du mouvement`() {
+        val m = motion(MovementControlMode.MOMENTUM)
+        repeat(12) { m.update(GameInput(-1f), 1f / 60f) }
+        // Mi-vitesse de pointe environ : atan(0,5) ≈ 26,6°, pas 22,5° (pas une simple proportion).
+        val ratio = -m.velocity / m.momentum.maxSpeed
+        assertEquals(Math.toDegrees(kotlin.math.atan(ratio.toDouble())).toFloat(), m.targetHeadingDeg, 0.01f)
+    }
+
+    @Test fun `cap - la proue tourne progressivement, pas d un coup`() {
+        val m = motion(MovementControlMode.POSITION)
+        run(m, 1f, 0.5f)
+        val target = m.targetHeadingDeg
+        assertTrue(abs(m.headingDeg) < abs(target), "Retard attendu : cap ${m.headingDeg}, visé $target")
+    }
+
+    @Test fun `cap - redevient droit a l arret`() {
+        val m = motion(MovementControlMode.MOMENTUM)
+        run(m, 1f, 1f)
+        run(m, 0f, 6f)
+        assertEquals(0f, m.headingDeg)
+    }
+
+    @Test fun `cap - pousse contre le bord, bateau immobile et proue redressee`() {
+        val m = motion(MovementControlMode.MOMENTUM)
+        run(m, -1f, 6f)
+        assertEquals(-1f, m.position)
+        assertEquals(0f, m.velocity)
+        assertEquals(0f, m.headingDeg)
+    }
+
+    @Test fun `cap - jamais au dela du maximum`() {
+        for (mode in MovementControlMode.entries) {
+            val m = motion(mode)
+            repeat(300) { m.update(GameInput(if (it < 150) 1f else -1f), 1f / 60f); assertTrue(abs(m.headingDeg) <= m.maxHeadingDeg + 1e-3f) }
+        }
+    }
+
+    @Test fun `cap - reglages invalides refuses`() {
+        assertFailsWith<IllegalArgumentException> { BoatMotion(maxHeadingDeg = 120f) }
+        assertFailsWith<IllegalArgumentException> { BoatMotion(headingSmoothingS = 0f) }
     }
 
     @Test fun `elan - facteur de vitesse applique`() {
@@ -195,7 +252,8 @@ class BoatMotionTest {
         val m = motion(MovementControlMode.POSITION)
         run(m, -1f, 0.5f)
         assertTrue(m.position < 0f)
-        assertTrue(m.tiltDeg > 0f, "Proue vers la gauche (rotation antihoraire)")
+        run(m, -1f, 0.3f)
+        assertTrue(m.headingDeg > 0f, "Proue vers la gauche (rotation antihoraire)")
         run(m, -1f, 10f)
         assertEquals(-1f, m.position, 0.01f)
     }
@@ -263,15 +321,9 @@ class BoatMotionTest {
         val m = motion(MovementControlMode.POSITION, 0f)
         run(m, 1f, 2f)
         assertEquals(0f, m.position, 1e-6f)
-        assertEquals(0f, m.tiltDeg)
+        assertEquals(0f, m.headingDeg)
     }
 
-    @Test fun `inclinaison bornee`() {
-        for (mode in MovementControlMode.entries) {
-            val m = motion(mode)
-            repeat(300) { m.update(GameInput(1f), 1f / 60f); assertTrue(abs(m.tiltDeg) <= m.maxTiltDeg + 1e-4f) }
-        }
-    }
 
     @Test fun `une longue pause ne fait pas sauter le bateau`() {
         val m = motion(MovementControlMode.VELOCITY)

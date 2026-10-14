@@ -8,6 +8,22 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.10.0] — 2026-10-14 — La proue s'oriente dans la direction du bateau
+
+### Added
+- La proue du bateau tourne progressivement vers la direction du mouvement : cap calculé sur le mouvement composé de la vitesse latérale et d'une avancée égale à la vitesse de pointe (45°, en diagonale, à pleine vitesse ; droite à l'arrêt), rejoint en douceur (temps de réponse de 0,3 s). Clavier, manette et corps, sur desktop, Android et web.
+- Sprites du bateau joueur en 32 orientations (une tous les 11,25°, au lieu de 8 à 45°), rendues par le script Blender. Le jeu affiche l'orientation la plus proche, avec la vraie perspective 3/4, et ne tourne le sprite que du petit reste (au plus 5,6°). Seules les 9 orientations de -45° à +45° sont chargées.
+- `BoatFrames.residualDeg` et `BoatFrames.indicesWithin` ; `BoatMotion.headingDeg` et `targetHeadingDeg` (réglages `maxHeadingDeg`, `headingSmoothingS`).
+- Web : cap du bateau exposé sur le canvas (`data-boat-heading`) pour les tests d'interface.
+- Tests unitaires (sens du cap, diagonale à la vitesse de pointe, cap selon la direction du mouvement, progressivité, redressement à l'arrêt et contre un bord, borne, 32 orientations, reste de rotation, images à charger) et test Playwright (la proue se tourne puis se redresse).
+
+### Changed
+- La rotation à plat du sprite (14° au plus, instantanée) est remplacée par le cap progressif.
+- README : 32 orientations et commande de rendu, cap de la proue.
+
+### Fixed
+- Pousser contre un bord immobilise le bateau et redresse sa proue. Avant, il rebondissait à chaque image et gardait la proue tournée alors qu'il ne bougeait plus. Le rebond ne s'applique plus que si l'on ne pousse pas vers ce bord.
+
 ## [0.9.3] — 2026-10-14 — Élan : retour au centre à 60 % de la vitesse de pointe
 
 ### Changed
@@ -226,3 +242,5 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que joueur, je veux que mon bateau revienne au centre un peu plus lentement qu'il ne part vers le bord, afin que le retour paraisse naturel et ne me prenne pas de vitesse.
 - `2026-10-14 | Retour au centre encore trop rapide : essayer 60 % de la vitesse de pointe | game/src/main/kotlin/.../launch/BoatMotion.kt, README.md, CHANGELOG.md, package.json`
   - En tant que joueur, je veux un retour au centre nettement plus calme que l'aller, afin de sentir que c'est moi qui donne l'élan.
+- `2026-10-14 | Légère rotation progressive du bateau dans la direction où il va, la pointe orientée dans sa direction à vitesse maximale | game/src/main/kotlin/.../launch/BoatMotion.kt, game/src/main/kotlin/.../launch/BoatFrames.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../PlatformHooks.kt, platform/web/src/main/kotlin/.../*, assets/boats/player/*, game/src/test/kotlin/.../launch/*, e2e/boat-keyboard.spec.ts, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux voir la proue de mon bateau se tourner peu à peu vers la direction où il va, afin de sentir qu'il navigue vraiment.

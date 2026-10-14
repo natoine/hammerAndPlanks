@@ -73,11 +73,14 @@ class LaunchScreen(
         }
     }
     private val boatMotion = BoatMotion(game.controlSettings)
-    private val boatRegion by lazy { TextureRegion(boat) }
-    private var reportedBoatOffset = Float.NaN
-    private val boat = Texture(Gdx.files.internal(BoatFrames.path(BoatFrames.indexForHeading(0f))), true).apply {
-        setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
+    /** Seules les orientations atteignables (cap de ±45°) sont chargées. */
+    private val boatFrames: Map<Int, TextureRegion> = BoatFrames.indicesWithin(boatMotion.maxHeadingDeg).associateWith { index ->
+        TextureRegion(Texture(Gdx.files.internal(BoatFrames.path(index)), true).apply {
+            setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
+        })
     }
+    private var reportedBoatOffset = Float.NaN
+    private var reportedHeading = Float.NaN
     private val titleGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/PirataOne-Regular.ttf"))
     private val textGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/Nunito.ttf"))
 
@@ -224,9 +227,10 @@ class LaunchScreen(
         }
         boatMotion.update(input, delta)
         val offset = boatOffset()
-        if (offset != reportedBoatOffset) {
+        if (offset != reportedBoatOffset || boatMotion.headingDeg != reportedHeading) {
             reportedBoatOffset = offset
-            platform.onBoatMoved(offset)
+            reportedHeading = boatMotion.headingDeg
+            platform.onBoatMoved(offset, boatMotion.headingDeg)
         }
     }
 
@@ -238,8 +242,10 @@ class LaunchScreen(
         val size = layout.boatSize
         val x = layout.boatCenterX + boatOffset() * layout.width
         val y = layout.boatCenterY + LaunchAnimation.bobOffset(time, size)
-        // Rotation autour du centre du sprite : le bateau s'incline dans le sens du mouvement.
-        batch.draw(boatRegion, x - size / 2f, y - size / 2f, size / 2f, size / 2f, size, size, 1f, 1f, boatMotion.tiltDeg)
+        // Image rendue la plus proche du cap, tournée du petit reste autour de son centre.
+        val heading = boatMotion.headingDeg
+        val frame = boatFrames[BoatFrames.indexForHeading(heading)] ?: boatFrames.getValue(0)
+        batch.draw(frame, x - size / 2f, y - size / 2f, size / 2f, size / 2f, size, size, 1f, 1f, BoatFrames.residualDeg(heading))
     }
 
     private fun drawTexts() {
@@ -277,7 +283,7 @@ class LaunchScreen(
         titleGenerator.dispose()
         textGenerator.dispose()
         sea.dispose()
-        boat.dispose()
+        boatFrames.values.forEach { it.texture.dispose() }
         batch.dispose()
     }
 
