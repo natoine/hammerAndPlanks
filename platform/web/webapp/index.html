@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14213d">
+  <title>Hammer and Planks</title>
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: #14213d; }
+    body { display: flex; justify-content: center; align-items: center; touch-action: none; }
+    #canvas { display: block; border: none; outline: none; }
+    /* Lisible par les lecteurs d'écran, invisible à l'écran. */
+    /* Retour caméra posé par-dessus le canvas, placé par le jeu (window.hapCamera.place). Effet miroir. */
+    #camera-thumbnail { position: fixed; display: none; object-fit: cover; transform: scaleX(-1); pointer-events: none; background: #0a1429; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  </style>
+</head>
+<body oncontextmenu="return false">
+  <!-- Le libellé et la langue sont fixés par le jeu (WebLauncher), traduits selon le navigateur. -->
+  <canvas id="canvas"></canvas>
+  <p id="input-mode" class="visually-hidden" aria-live="polite"></p>
+  <p id="motion-status" class="visually-hidden" aria-live="polite"></p>
+  <script>
+    // Interop navigateur appelée par le lanceur TeaVM (BrowserApi.kt).
+    window.hapGamepads = function () {
+      if (!navigator.getGamepads) return false;
+      var pads = navigator.getGamepads();
+      for (var i = 0; i < pads.length; i++) { if (pads[i] && pads[i].connected) return true; }
+      return false;
+    };
+
+    // Stick gauche de la première manette connectée (mapping standard : axes 0 et 1), centre sinon.
+    window.hapGamepadStick = function () {
+      if (!navigator.getGamepads) return [0, 0];
+      var pads = navigator.getGamepads();
+      for (var i = 0; i < pads.length; i++) {
+        var p = pads[i];
+        if (p && p.connected && p.axes && p.axes.length >= 2) return [p.axes[0], p.axes[1]];
+      }
+      return [0, 0];
+    };
+
+    // Caméra à la demande : getUserMedia seulement au passage en mode caméra, flux coupé dès qu'on en sort.
+    window.hapCamera = (function () {
+      var status = "OFF", stream = null, video = null, wanted = false, placement = null;
+      function applyPlacement() {
+        if (!video || !placement) return;
+        video.style.left = placement[0] * 100 + "%";
+        video.style.top = placement[1] * 100 + "%";
+        video.style.width = placement[2] * 100 + "%";
+        video.style.height = placement[3] * 100 + "%";
+        video.style.borderRadius = Math.round(placement[2] * window.innerWidth * 0.05) + "px";
+      }
+      function element() {
+        if (!video) {
+          video = document.createElement("video");
+          video.id = "camera-thumbnail";
+          video.muted = true;
+          video.playsInline = true;
+          video.autoplay = true;
+          video.setAttribute("aria-hidden", "true");
+          document.body.appendChild(video);
+          applyPlacement();
+        }
+        return video;
+      }
+      function release(s) { s.getTracks().forEach(function (t) { t.stop(); }); }
+      return {
+        status: function () { return status; },
+        start: function () {
+          if (wanted) return;
+          wanted = true;
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { status = "UNAVAILABLE"; return; }
+          status = "STARTING";
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
+            .then(function (s) {
+              if (!wanted) { release(s); return; }
+              stream = s;
+              var v = element();
+              v.srcObject = s;
+              v.style.display = "block";
+              return v.play().then(function () { if (wanted) status = "LIVE"; });
+            })
+            .catch(function (e) {
+              if (!wanted) return;
+              status = e && (e.name === "NotAllowedError" || e.name === "SecurityError") ? "DENIED" : "UNAVAILABLE";
+            });
+        },
+        stop: function () {
+          wanted = false;
+          if (stream) { release(stream); stream = null; }
+          if (video) { video.srcObject = null; video.style.display = "none"; }
+          status = "OFF";
+        },
+        // Mémorise la zone ; l'élément vidéo n'est créé qu'au démarrage de la caméra.
+        place: function (left, top, width, height) {
+          placement = [left, top, width, height];
+          applyPlacement();
+        }
+      };
+    })();
+
+    window.addEventListener("load", function () { main(); });
+  </script>
+  <script src="pose.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

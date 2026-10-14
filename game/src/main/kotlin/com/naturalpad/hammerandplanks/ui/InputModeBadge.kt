@@ -1,0 +1,135 @@
+package com.naturalpad.hammerandplanks.ui
+
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
+import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
+import com.badlogic.gdx.utils.I18NBundle
+import com.naturalpad.hammerandplanks.input.InputMode
+import kotlin.math.max
+
+/** Dessine le badge du mode d'interaction et dit si un appui le touche. */
+class InputModeBadge(private val texts: I18NBundle, private val touchHint: Boolean) {
+    private val icons: Map<String, Texture> = InputModeBadgeLayout.ALL_ICON_PATHS.associateWith { path ->
+        Texture(Gdx.files.internal(path), true).apply {
+            setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
+        }
+    }
+    private val textGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/Nunito.ttf"))
+    private var labelFont: BitmapFont? = null
+    private var hintFont: BitmapFont? = null
+    private var background: RoundedBox? = null
+    private var layout: InputModeBadgeLayout? = null
+    private val glyphs = GlyphLayout()
+    private val backgroundColor = Color()
+
+    /** Zone d'appui du dernier badge dessiné. */
+    var hitBox: HitBox = HitBox(0f, 0f, 0f, 0f)
+        private set
+
+    fun resize(newLayout: InputModeBadgeLayout) {
+        if (newLayout == layout) return
+        val sizesChanged = layout?.let {
+            it.iconPx != newLayout.iconPx || it.labelPx != newLayout.labelPx || it.hintPx != newLayout.hintPx
+        } ?: true
+        layout = newLayout
+        if (sizesChanged) regenerate(newLayout)
+        measured = null
+    }
+
+    private fun regenerate(l: InputModeBadgeLayout) {
+        disposeGraphics()
+        labelFont = textGenerator.generateFont(FreeTypeFontGenerator.FreeTypeFontParameter().apply {
+            size = l.labelPx
+            color = Color.WHITE
+        })
+        hintFont = textGenerator.generateFont(FreeTypeFontGenerator.FreeTypeFontParameter().apply {
+            size = l.hintPx
+            color = HINT_COLOR
+        })
+        background = RoundedBox(l.cornerRadius)
+    }
+
+    /** Mesures du badge : textes, taille, zone d'appui. */
+    private class Measure(
+        val label: String, val lines: List<String>, val width: Float, val height: Float, val textHeight: Float,
+    )
+
+    /** Ce qui est affiché : mode, présence d'une manette (picto barré), ligne d'état du mode caméra. */
+    private data class State(val mode: InputMode, val gamepadConnected: Boolean, val statusKey: String?)
+
+    private var measured: Pair<State, Measure>? = null
+
+    /**
+     * Calcule taille et zone d'appui sans dessiner. Appelé dès le redimensionnement,
+     * pour qu'un appui arrivé avant la première image soit déjà reconnu.
+     * [statusKey] : clé de la ligne d'état du mode caméra (voir [InputModeBadgeLayout.motionStatusKey]).
+     */
+    fun update(mode: InputMode, gamepadConnected: Boolean, statusKey: String? = null) {
+        val l = layout ?: return
+        val label = labelFont ?: return
+        val hint = hintFont ?: return
+        val labelText = texts.get(InputModeBadgeLayout.labelKey(mode, gamepadConnected))
+        val switchText = texts.get(if (touchHint) "input.switch.touch" else "input.switch.key")
+        val lines = listOfNotNull(statusKey?.let(texts::get), switchText)
+        glyphs.setText(label, labelText)
+        var textWidth = glyphs.width
+        for (line in lines) { glyphs.setText(hint, line); textWidth = max(textWidth, glyphs.width) }
+        val lineGap = l.gap * 0.6f
+        val textHeight = label.capHeight + lines.size * (lineGap + hint.capHeight)
+        val height = l.height(max(l.iconPx.toFloat(), textHeight))
+        val width = l.width(textWidth)
+        hitBox = HitBox(l.x, l.y, width, height)
+        measured = State(mode, gamepadConnected, statusKey) to Measure(labelText, lines, width, height, textHeight)
+    }
+
+    fun draw(batch: SpriteBatch, mode: InputMode, gamepadConnected: Boolean, alpha: Float, statusKey: String? = null) {
+        val l = layout ?: return
+        val label = labelFont ?: return
+        val hint = hintFont ?: return
+        if (measured?.first != State(mode, gamepadConnected, statusKey)) update(mode, gamepadConnected, statusKey)
+        val m = measured?.second ?: return
+
+        background?.patch?.let {
+            it.color = backgroundColor.set(BACKGROUND_COLOR).apply { a *= alpha }
+            it.draw(batch, l.x, l.y, m.width, m.height)
+        }
+        val centerY = l.y + m.height / 2f
+        val previous = batch.packedColor
+        batch.setColor(1f, 1f, 1f, alpha)
+        val iconSize = l.iconPx.toFloat()
+        batch.draw(icons.getValue(InputModeBadgeLayout.iconPath(mode, gamepadConnected)), l.x + l.padding, centerY - iconSize / 2f, iconSize, iconSize)
+        batch.packedColor = previous
+        val textX = l.x + l.padding + l.iconPx + l.gap
+        var y = centerY + m.textHeight / 2f
+        label.color.a = alpha
+        label.draw(batch, m.label, textX, y)
+        y -= label.capHeight
+        hint.color.a = HINT_COLOR.a * alpha
+        for (line in m.lines) {
+            y -= l.gap * 0.6f
+            hint.draw(batch, line, textX, y)
+            y -= hint.capHeight
+        }
+    }
+
+    private fun disposeGraphics() {
+        labelFont?.dispose(); labelFont = null
+        hintFont?.dispose(); hintFont = null
+        background?.dispose(); background = null
+    }
+
+    fun dispose() {
+        disposeGraphics()
+        icons.values.forEach(Texture::dispose)
+        textGenerator.dispose()
+    }
+
+    private companion object {
+        val BACKGROUND_COLOR: Color = Color(0.04f, 0.08f, 0.16f, 0.75f)
+        val HINT_COLOR: Color = Color(1f, 1f, 1f, 0.75f)
+    }
+}
