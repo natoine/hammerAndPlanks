@@ -58,6 +58,20 @@ test.describe('écran de lancement', () => {
     expect(errors).toEqual([]);
   });
 
+  test('la mer animée est rendue par le shader et bouge', async ({ page }) => {
+    const logs: string[] = [];
+    page.on('console', (m) => logs.push(m.text()));
+    const canvas = await waitForLaunchScreen(page);
+    // Le jeu journalise le résultat de la compilation du shader de mer (sinon repli sans vagues).
+    await expect.poll(() => logs.some((l) => l.includes('Shader de mer compilé'))).toBe(true);
+    expect(logs.filter((l) => l.includes('Shader de mer non compilé'))).toEqual([]);
+
+    const first = await canvas.screenshot();
+    await page.waitForTimeout(1000);
+    const second = await canvas.screenshot();
+    expect(first.equals(second)).toBe(false);
+  });
+
   test('pas de défilement horizontal sur mobile', async ({ page }) => {
     await waitForLaunchScreen(page);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);

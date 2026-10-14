@@ -34,7 +34,7 @@ Backend web	TeaVM plutôt que Kotlin/JS ou Kotlin/Wasm : le backend GWT de libGD
 
 3. Démarrer, lancer et tester
 
-État actuel (0.1.0) : écran de lancement sur desktop, Android et navigateur. Seuls les modules :game et :platform:desktop, :platform:android, :platform:web existent ; les autres modules de la section 4 seront créés au fil des besoins. iOS (MobiVM) demande un Mac pour compiler et n'est pas encore branché.
+État actuel : écran de lancement (mer animée, bateau, titre) sur desktop, Android et navigateur. Seuls les modules :game et :platform:desktop, :platform:android, :platform:web existent ; les autres modules de la section 4 seront créés au fil des besoins. iOS (MobiVM) demande un Mac pour compiler et n'est pas encore branché.
 
 Prérequis : JDK 17 ou plus (testé avec 21), Node 22 et npm, SDK Android (chemin dans local.properties, non versionné : `sdk.dir=/chemin/vers/Android/Sdk`). Gradle est fourni par le wrapper (./gradlew).
 
@@ -60,7 +60,7 @@ npm run web:build && npm run test:e2e   # tests d'interface Playwright (Chromium
 
 Comment tester l'écran de lancement, plateforme par plateforme
 
-Résultat attendu partout : la mer défile lentement vers le bas, le bateau (vue 3/4, proue vers le haut) tangue au centre, le titre « Hammer and Planks » puis l'accroche apparaissent en fondu en haut, la version s'affiche en bas à droite. L'accroche est en français sur un système ou un navigateur en français, en anglais sinon.
+Résultat attendu partout : la mer défile lentement vers le bas avec des vagues et des lignes d'écume qui ondulent, le bateau (vue 3/4, proue vers le haut) tangue au centre, le titre « Hammer and Planks » puis l'accroche apparaissent en fondu en haut, la version s'affiche en bas à droite. L'accroche est en français sur un système ou un navigateur en français, en anglais sinon.
 
 Desktop (le plus rapide, pour le développement)
 1. `npm run desktop` : une fenêtre portrait 540x960 s'ouvre.
@@ -250,6 +250,10 @@ Tests : module Kotlin pur, testable sans moteur ni téléphone.
 Modèles 3D créés dans Blender, rendus en sprites ou sprite sheets (rotation du bateau, tir, explosion) pour un rendu 2D dans un moteur 2D. Aucun changement d'architecture ; coût de perf minimal.
 Passer à de la vraie 3D temps réel (Three.js, Unity 3D, etc.) n'est justifié que pour une caméra dynamique, une mer qui ondule en temps réel ou de la lumière dynamique. C'est un saut de périmètre.
 Les assets de l'ancien jeu Unity (dépôt HammerAndPlanks) sont réutilisables : droits confirmés par NaturalPad. Seuls les textes dessinés dans les images sont écartés (contraire à l'i18n). Les modèles 3D (FBX) sont rendus en sprites via des scripts Blender en ligne de commande.
+
+Mer animée
+
+La mer reprend le shader de l'ancien jeu Unity (Assets/Shaders/PerlinNormalHeight.shader) : une turbulence de bruit 3D donne une hauteur de vague qui fait onduler la texture (parallaxe) et dessine l'écume sur les crêtes ; la 3e dimension du bruit fait évoluer les vagues sur place. Portage en GLSL ES 1.0 dans assets/shaders/sea.frag (Android, iOS, desktop, WebGL 1), bruit simplex calculé dans le shader (webgl-noise, MIT). Les réglages sont dans game/.../sea/SeaWaves.kt ; ceux de l'ancien matériau sont conservés (couleur et bande d'écume, lacunarité 2, gain 0,5, phase 0,2/s). Seules différences : 4 octaves au lieu de 5 et pas d'éclairage, effet négligeable en vue de dessus. Si le shader ne compile pas sur un appareil, la mer s'affiche sans vagues (repli journalisé). Coût GPU à mesurer sur un téléphone d'entrée de gamme : le nombre d'octaves est le premier levier.
 
 Pipeline Blender → sprites
 

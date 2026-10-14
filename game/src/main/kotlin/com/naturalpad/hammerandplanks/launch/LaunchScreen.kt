@@ -14,9 +14,10 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.naturalpad.hammerandplanks.BuildInfo
 import com.naturalpad.hammerandplanks.HammerAndPlanksGame
 import com.naturalpad.hammerandplanks.PlatformHooks
+import com.naturalpad.hammerandplanks.sea.SeaRenderer
 
 /**
- * Écran de lancement : la mer de l'ancien jeu défile, le bateau joueur (vue 3/4) tangue au centre,
+ * Écran de lancement : la mer animée de l'ancien jeu (vagues et écume) défile, le bateau joueur (vue 3/4) tangue au centre,
  * le titre et l'accroche apparaissent en fondu. Les textes viennent du bundle i18n.
  */
 class LaunchScreen(
@@ -26,11 +27,7 @@ class LaunchScreen(
 
     private val viewport = ScreenViewport()
     private val batch = SpriteBatch()
-    // Pas de mipmaps : la texture n'a pas des côtés en puissance de deux, ce que WebGL 1 refuse.
-    // Elle est floue par nature, le filtrage linéaire suffit.
-    private val sea = Texture(Gdx.files.internal("sea/sea.jpg")).apply {
-        setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
-    }
+    private val sea = SeaRenderer()
     private val boat = Texture(Gdx.files.internal(BoatFrames.path(BoatFrames.indexForHeading(0f))), true).apply {
         setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
     }
@@ -99,16 +96,7 @@ class LaunchScreen(
     }
 
     private fun drawSea() {
-        val w = layout.width.toFloat()
-        val h = layout.height.toFloat()
-        // La texture couvre toute la largeur ; elle se raccorde verticalement, on l'empile.
-        val tileH = sea.height * (w / sea.width)
-        val offset = LaunchAnimation.seaOffset(time, tileH)
-        var y = -offset
-        while (y < h) {
-            batch.draw(sea, 0f, y, w, tileH)
-            y += tileH
-        }
+        sea.draw(batch, layout.width.toFloat(), layout.height.toFloat(), time)
     }
 
     private fun drawBoat() {

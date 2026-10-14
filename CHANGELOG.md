@@ -8,6 +8,20 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.2.0] — 2026-10-14 — Mer animée : vagues et écume
+
+### Added
+- Mer animée portée du shader Unity de l'ancien jeu (« Parallax Specular Proc ») : turbulence de bruit 3D, ondulation de la texture par parallaxe, lignes d'écume sur les crêtes, vagues qui évoluent sur place et défilent avec la texture. Shaders GLSL ES 1.0 dans `assets/shaders/sea.vert` et `sea.frag`, compatibles Android, iOS, desktop et WebGL 1.
+- Bruit simplex 3D calculé dans le shader (webgl-noise d'Ashima Arts, licence MIT), sans les textures de permutation de l'ancien jeu.
+- `SeaWaves` : réglages repris de l'ancien matériau (couleur et bande d'écume, lacunarité, gain, vitesse de phase), 4 octaves au lieu de 5 pour ménager les téléphones.
+- `SeaRenderer` : rendu de la mer en un seul quad plein écran, avec repli sur la texture qui défile si le shader ne compile pas sur l'appareil.
+- Tests unitaires de la mer (phase, défilement du bruit, parallaxe, formule d'écume, réglages invalides) et de cohérence entre le shader et le code Kotlin (uniforms, borne d'octaves, GLSL ES 1.0).
+- Test Playwright : le shader de mer compile dans le navigateur et l'image change d'un instant à l'autre.
+
+### Changed
+- Écran de lancement : la mer animée remplace la texture simple.
+- README : section assets complétée par le rendu de la mer.
+
 ## [0.1.1] — 2026-10-14 — README : procédure de test
 
 ### Changed
@@ -56,3 +70,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que joueur, je veux voir au lancement du jeu mon bateau naviguer sur l'océan avec le titre dans ma langue, sur téléphone, sur ordinateur et dans le navigateur, afin d'entrer tout de suite dans l'univers du jeu.
 - `2026-10-14 | Ajout des informations de lancement et de test dans le README | README.md, CHANGELOG.md, package.json`
   - En tant que membre de l'équipe, je veux trouver dans le README comment lancer et tester le jeu sur chaque plateforme, afin de vérifier l'écran de lancement sans aide.
+- `2026-10-14 | La mer de l'ancien jeu avait un effet de vagues par shader : analyse de l'ancien shader Unity | (aucun fichier modifié)`
+  - En tant que joueur, je veux retrouver la mer animée de l'ancien jeu, afin de reconnaître son univers visuel.
+- `2026-10-14 | Implémentation de la mer animée (portage du shader de vagues) | assets/shaders/sea.vert, assets/shaders/sea.frag, game/src/main/kotlin/.../sea/SeaWaves.kt, game/src/main/kotlin/.../sea/SeaRenderer.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/test/kotlin/.../sea/*, e2e/launch-screen.spec.ts, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux voir des vagues et de l'écume bouger sur la mer dès l'écran de lancement, sur téléphone, ordinateur et navigateur, afin de retrouver l'ambiance de l'ancien jeu.
