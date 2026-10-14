@@ -38,6 +38,18 @@ class DesktopOptionsTest {
         assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--input-mode=touch")) }
     }
 
+    @Test fun `controle du bateau`() {
+        val o = DesktopOptions.parse(arrayOf("--control=Velocity", "--speed=0.5"))
+        assertEquals("VELOCITY", o.controlMode)
+        assertEquals("0.5", o.speedFactor)
+    }
+
+    @Test fun `controle et vitesse invalides refuses`() {
+        assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--control=turbo")) }
+        assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--speed=2")) }
+        assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--speed=vite")) }
+    }
+
     @Test fun `option inconnue refusee`() {
         assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--plein-ecran")) }
     }

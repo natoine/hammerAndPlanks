@@ -7,11 +7,14 @@ data class DesktopOptions(
     val height: Int = DEFAULT_HEIGHT,
     val screenshotPath: String? = null,
     val inputMode: String? = null,
+    val controlMode: String? = null,
+    val speedFactor: String? = null,
 ) {
     companion object {
         const val DEFAULT_WIDTH = 540
         const val DEFAULT_HEIGHT = 960
         val INPUT_MODES = listOf("keyboard", "gamepad", "motion")
+        val CONTROL_MODES = listOf("position", "velocity", "force")
 
         fun parse(args: Array<String>): DesktopOptions {
             var options = DesktopOptions()
@@ -22,6 +25,15 @@ data class DesktopOptions(
                     arg.startsWith("--input-mode=") -> {
                         require(value.lowercase() in INPUT_MODES) { "Mode inconnu : '$value' (attendu : ${INPUT_MODES.joinToString()})" }
                         options.copy(inputMode = value.uppercase())
+                    }
+                    arg.startsWith("--control=") -> {
+                        require(value.lowercase() in CONTROL_MODES) { "Mode de contrôle inconnu : '$value' (attendu : ${CONTROL_MODES.joinToString()})" }
+                        options.copy(controlMode = value.uppercase())
+                    }
+                    arg.startsWith("--speed=") -> {
+                        val speed = value.toFloatOrNull()
+                        require(speed != null && speed in 0f..1f) { "Facteur de vitesse invalide : '$value' (attendu entre 0 et 1)" }
+                        options.copy(speedFactor = value)
                     }
                     arg.startsWith("--screenshot=") -> options.copy(screenshotPath = value.ifBlank { null })
                     arg.startsWith("--size=") -> {

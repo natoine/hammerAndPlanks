@@ -1,6 +1,6 @@
 {
   "name": "hammer-and-planks",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "private": true,
   "description": "Vertical shooter de pirates piloté par le corps (libGDX, Kotlin). Ce fichier porte la version unique du projet, lue par Gradle.",
   "scripts": {

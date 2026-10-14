@@ -9,7 +9,8 @@ import java.util.Locale
 /**
  * Lanceur de développement (LWJGL3). Fenêtre au format portrait d'un smartphone, redimensionnable.
  * Options : --lang=fr|en (force la langue), --size=LARGEURxHAUTEUR, --screenshot=fichier.png (capture puis quitte),
- * --input-mode=keyboard|gamepad|motion (impose le mode d'interaction au lancement).
+ * --input-mode=keyboard|gamepad|motion (impose le mode d'interaction au lancement),
+ * --control=position|velocity|force et --speed=0..1 (contrôle du bateau).
  */
 fun main(args: Array<String>) {
     val options = DesktopOptions.parse(args)
@@ -19,6 +20,8 @@ fun main(args: Array<String>) {
         override val gamepads = DesktopGamepads()
         override val camera = DesktopCamera()
         override val forcedInputMode: String? = options.inputMode
+        override val forcedControlMode: String? = options.controlMode
+        override val forcedSpeedFactor: String? = options.speedFactor
     }
     val config = Lwjgl3ApplicationConfiguration().apply {
         setTitle("Hammer and Planks")

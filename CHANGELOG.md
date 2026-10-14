@@ -8,6 +8,34 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.6.0] — 2026-10-14 — Contrôle du bateau repris de l'ancien jeu
+
+### Added
+- Trois modes de contrôle du bateau repris de l'ancien jeu (`MovementControlMode`) : position (l'axe désigne un point du rail ; relâcher ramène au centre ; mode par défaut, comme l'ancien jeu), vitesse (relâcher arrête le bateau sur place), force (relâcher laisse le bateau sur sa lancée).
+- `SmoothDamp` : portage exact de `Mathf.SmoothDamp` de Unity, lissage de 0,6 s de l'ancien jeu.
+- Vitesse maximale de l'ancien jeu (6 unités/s sur un rail de 32, soit 0,375 demi-rail/s) et facteur de vitesse du joueur dans [0, 1] (`ControlSettings`), lus dans les préférences.
+- `GameInput` (module `:input`) : entrée commune à tous les modes d'interaction ; le clavier le produit, le bateau le consomme.
+- Options de lancement : desktop `--control=position|velocity|force` et `--speed=0..1` (`-Pcontrol`, `-Pspeed` avec Gradle) ; web `?control=` et `?speed=` dans l'URL.
+- Tests unitaires (trois modes, butée, facteur de vitesse, changement de mode, lissage indépendant de la fréquence d'images, réglages) et tests Playwright (retour au centre en mode position, arrêt sur place en mode vitesse, lancée en mode force, facteur de vitesse nul).
+
+### Changed
+- Déplacement du bateau : le mode position remplace le contrôle en vitesse de la 0.5.0 par défaut. Le bateau va moins vite, à la vitesse de l'ancien jeu. L'inclinaison dans le virage est conservée.
+- Modes vitesse et force : l'intention de l'ancien jeu est reprise, pas sa formule. Dans l'ancien code, la cible n'avançait que d'un pas d'image avant le lissage : le bateau parcourait moins d'une unité en 5 s sur un demi-rail de 16 à 60 images/s, et moins encore à fréquence plus élevée.
+- README : modes de contrôle, options de lancement, procédure de test.
+
+## [0.5.0] — 2026-10-14 — Déplacement du bateau au clavier
+
+### Added
+- Mode clavier : les flèches gauche et droite déplacent le bateau sur l'écran de lancement (desktop, Android avec clavier physique, web). Le bateau accélère, s'incline dans le sens du mouvement, glisse un peu quand on relâche et s'arrête au bord de l'écran. Les deux flèches ensemble s'annulent. Dans les autres modes, les flèches n'ont pas d'effet.
+- `KeyboardSteering` (module `:input`) : axe horizontal à partir des flèches.
+- `BoatMotion` : position et vitesse en fractions de la largeur d'écran (justes après redimensionnement), accélération, freinage, inclinaison, butée, pas de temps borné après une pause.
+- `LaunchLayout.boatLimit` : débattement maximal pour que la coque reste dans l'écran.
+- Web : les flèches ne font pas défiler la page ; position du bateau exposée sur le canvas (`data-boat-offset`) pour les tests d'interface.
+- Tests unitaires (axe clavier, mouvement, butée, limites d'écran) et tests Playwright (déplacement à gauche et à droite, arrêt, butée, page fixe, flèches inactives hors mode clavier).
+
+### Changed
+- README : déplacement au clavier, procédure de test par plateforme.
+
 ## [0.4.0] — 2026-10-14 — Manette barrée et imagette de la caméra
 
 ### Added
@@ -111,3 +139,9 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que joueur, je veux voir en bas à gauche de l'écran quel mode d'interaction j'utilise (clavier, manette ou caméra) et en changer avec la touche Tab, ou en touchant le picto sur téléphone, afin de jouer avec le périphérique de mon choix.
 - `2026-10-14 | Manette barrée si aucune manette branchée ; imagette du retour caméra en bas à droite en mode caméra | game/src/main/kotlin/.../platform/*, game/src/main/kotlin/.../ui/*, game/src/main/kotlin/.../util/PeriodicCheck.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../HammerAndPlanksGame.kt, game/src/main/kotlin/.../PlatformHooks.kt, platform/desktop/**, platform/android/**, platform/web/**, assets/ui/*, assets/i18n/*, assets-src/ui/*, gradle/libs.versions.toml, playwright.config.ts, e2e/*, README.md, CHANGELOG.md, package.json`
   - En tant que joueur, je veux voir que ma manette n'est pas détectée et, en mode caméra, voir ce que filme la caméra, afin de savoir si mon périphérique est prêt avant de jouer.
+- `2026-10-14 | En mode clavier, déplacer le bateau à gauche et à droite avec les flèches | input/src/main/kotlin/.../KeyboardSteering.kt, game/src/main/kotlin/.../launch/BoatMotion.kt, game/src/main/kotlin/.../launch/LaunchLayout.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../PlatformHooks.kt, platform/web/src/main/kotlin/.../*, input/src/test/**, game/src/test/**, e2e/boat-keyboard.spec.ts, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur au clavier, je veux déplacer mon bateau à gauche et à droite avec les flèches, afin de le piloter.
+- `2026-10-14 | Question : le contrôle s'inspire-t-il de l'ancien projet ? Analyse de PlayerHorizontalMovement | (aucun fichier modifié)`
+  - En tant que développeur, je veux savoir comment l'ancien jeu pilotait le bateau, afin de retrouver ses sensations.
+- `2026-10-14 | Reprise des trois modes de contrôle et du lissage de l'ancien jeu, inclinaison conservée | input/src/main/kotlin/.../GameInput.kt, input/src/main/kotlin/.../KeyboardSteering.kt, game/src/main/kotlin/.../control/*, game/src/main/kotlin/.../util/SmoothDamp.kt, game/src/main/kotlin/.../launch/BoatMotion.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../HammerAndPlanksGame.kt, game/src/main/kotlin/.../PlatformHooks.kt, platform/desktop/**, platform/web/**, input/src/test/**, game/src/test/**, e2e/boat-keyboard.spec.ts, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux retrouver les modes de contrôle de l'ancien jeu (position, vitesse, force) et sa douceur de déplacement, afin de piloter le bateau comme avant, avec le réglage adapté à mes capacités.

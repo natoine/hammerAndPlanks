@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.ScreenUtils
@@ -19,7 +20,9 @@ import com.naturalpad.hammerandplanks.BuildInfo
 import com.naturalpad.hammerandplanks.HammerAndPlanksGame
 import com.naturalpad.hammerandplanks.PlatformHooks
 import com.naturalpad.hammerandplanks.sea.SeaRenderer
+import com.naturalpad.hammerandplanks.input.GameInput
 import com.naturalpad.hammerandplanks.input.InputMode
+import com.naturalpad.hammerandplanks.input.KeyboardSteering
 import com.naturalpad.hammerandplanks.ui.CameraPanel
 import com.naturalpad.hammerandplanks.ui.CameraThumbnailLayout
 import com.naturalpad.hammerandplanks.ui.InputModeBadge
@@ -51,6 +54,8 @@ class LaunchScreen(
     /** Tab fait défiler les modes d'interaction ; un appui sur le badge aussi (écrans tactiles). */
     private val input = object : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
+            // Flèches consommées en mode clavier (lues à chaque image dans render) : la page web ne défile pas.
+            if (keycode == Input.Keys.LEFT || keycode == Input.Keys.RIGHT) return game.inputModes.current == InputMode.KEYBOARD
             if (keycode != Input.Keys.TAB) return false
             badge.update(game.inputModes.next(), game.gamepadConnected)
             return true
@@ -63,6 +68,9 @@ class LaunchScreen(
             return true
         }
     }
+    private val boatMotion = BoatMotion(game.controlSettings)
+    private val boatRegion by lazy { TextureRegion(boat) }
+    private var reportedBoatOffset = Float.NaN
     private val boat = Texture(Gdx.files.internal(BoatFrames.path(BoatFrames.indexForHeading(0f))), true).apply {
         setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
     }
@@ -168,6 +176,7 @@ class LaunchScreen(
         time += delta
         if (gamepadCheck.update(delta)) game.gamepadConnected = gamepadCheck.value == true
         syncCamera()
+        updateBoat(delta)
         ScreenUtils.clear(DEEP_SEA)
         viewport.apply()
         batch.projectionMatrix = viewport.camera.combined
@@ -185,10 +194,31 @@ class LaunchScreen(
         sea.draw(batch, layout.width.toFloat(), layout.height.toFloat(), time)
     }
 
+    /** Mode clavier : les flèches donnent le GameInput qui pilote le bateau. Manette et caméra ne sont pas encore branchées. */
+    private fun updateBoat(delta: Float) {
+        val input = if (game.inputModes.current == InputMode.KEYBOARD) {
+            KeyboardSteering.read(Gdx.input.isKeyPressed(Input.Keys.LEFT), Gdx.input.isKeyPressed(Input.Keys.RIGHT))
+        } else {
+            GameInput.IDLE
+        }
+        boatMotion.update(input, delta)
+        val offset = boatOffset()
+        if (offset != reportedBoatOffset) {
+            reportedBoatOffset = offset
+            platform.onBoatMoved(offset)
+        }
+    }
+
+    /** Décalage du bateau depuis le centre, en fraction de la largeur d'écran (position de rail × demi-rail). */
+    private fun boatOffset(): Float =
+        boatMotion.position * LaunchLayout.boatLimit(layout.width, layout.boatSize, layout.margin)
+
     private fun drawBoat() {
         val size = layout.boatSize
+        val x = layout.boatCenterX + boatOffset() * layout.width
         val y = layout.boatCenterY + LaunchAnimation.bobOffset(time, size)
-        batch.draw(boat, layout.boatCenterX - size / 2f, y - size / 2f, size, size)
+        // Rotation autour du centre du sprite : le bateau s'incline dans le sens du mouvement.
+        batch.draw(boatRegion, x - size / 2f, y - size / 2f, size / 2f, size / 2f, size, size, 1f, 1f, boatMotion.tiltDeg)
     }
 
     private fun drawTexts() {

@@ -3,6 +3,7 @@ package com.naturalpad.hammerandplanks
 import com.badlogic.gdx.Game
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.utils.I18NBundle
+import com.naturalpad.hammerandplanks.control.ControlSettings
 import com.naturalpad.hammerandplanks.input.InputMode
 import com.naturalpad.hammerandplanks.input.InputModeSelector
 import com.naturalpad.hammerandplanks.launch.LaunchScreen
@@ -14,6 +15,10 @@ class HammerAndPlanksGame(private val platform: PlatformHooks) : Game() {
         private set
     lateinit var texts: I18NBundle
         private set
+    /** Réglages de contrôle du bateau (mode position, vitesse ou force ; facteur de vitesse). */
+    lateinit var controlSettings: ControlSettings
+        private set
+
     /** Mode d'interaction choisi, sauvegardé entre deux lancements. */
     lateinit var inputModes: InputModeSelector
         private set
@@ -23,6 +28,11 @@ class HammerAndPlanksGame(private val platform: PlatformHooks) : Game() {
         texts = Texts.load(Gdx.files.internal("i18n/messages"), language)
         gamepadConnected = platform.gamepads.isConnected()
         val prefs = Gdx.app.getPreferences(PREFERENCES)
+        // Pas encore de menu d'options : les réglages de contrôle se lisent dans les préférences ou une option de lancement.
+        controlSettings = ControlSettings.parse(
+            platform.forcedControlMode ?: prefs.getString(KEY_CONTROL_MODE, null),
+            platform.forcedSpeedFactor ?: prefs.getString(KEY_SPEED_FACTOR, null),
+        )
         val initial = platform.forcedInputMode ?: prefs.getString(KEY_INPUT_MODE, null)
         inputModes = InputModeSelector(InputModeSelector.parse(initial)) { mode ->
             prefs.putString(KEY_INPUT_MODE, mode.name)
@@ -54,5 +64,7 @@ class HammerAndPlanksGame(private val platform: PlatformHooks) : Game() {
     private companion object {
         const val PREFERENCES = "hammer-and-planks"
         const val KEY_INPUT_MODE = "inputMode"
+        const val KEY_CONTROL_MODE = "controlMode"
+        const val KEY_SPEED_FACTOR = "speedFactor"
     }
 }

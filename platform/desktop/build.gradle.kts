@@ -34,6 +34,9 @@ tasks.named<JavaExec>("run") {
     project.findProperty("screenshot")?.let { args("--screenshot=$it") }
     // et d'imposer le mode d'interaction : -Pmode=motion (keyboard, gamepad, motion)
     project.findProperty("mode")?.let { args("--input-mode=$it") }
+    // et le contrôle du bateau : -Pcontrol=velocity -Pspeed=0.5
+    project.findProperty("control")?.let { args("--control=$it") }
+    project.findProperty("speed")?.let { args("--speed=$it") }
 }
 
 dependencies {

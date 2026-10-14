@@ -66,6 +66,19 @@ data class LaunchLayout(
             )
         }
 
+        /** Part de la largeur du sprite occupée par la coque (proue vers le haut, voir assets/boats/player). */
+        const val HULL_WIDTH_RATIO = 0.3f
+
+        /**
+         * Demi-largeur du rail du bateau, en fraction de la largeur d'écran : décalage maximal depuis le centre
+         * pour que la coque reste dans l'écran, marge comprise. Jamais négatif. Position de rail ±1 = ce décalage.
+         */
+        fun boatLimit(width: Int, boatSize: Float, margin: Float): Float {
+            require(width > 0) { "Largeur invalide : $width" }
+            val free = width / 2f - margin - boatSize * HULL_WIDTH_RATIO / 2f
+            return (free / width).coerceAtLeast(0f)
+        }
+
         /**
          * Ligne de base de l'accroche sous un bloc de titre de hauteur mesurée [titleBlockHeight]
          * (le titre peut passer sur deux lignes selon la langue et la largeur d'écran).

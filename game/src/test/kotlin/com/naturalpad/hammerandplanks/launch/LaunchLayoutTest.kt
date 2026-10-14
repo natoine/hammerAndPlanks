@@ -1,6 +1,7 @@
 package com.naturalpad.hammerandplanks.launch
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -68,6 +69,22 @@ class LaunchLayoutTest {
 
     @Test fun `hauteur de titre negative refusee`() {
         assertFailsWith<IllegalArgumentException> { LaunchLayout.taglineBaselineBelow(900f, -1f, 20) }
+    }
+
+    @Test fun `a la limite la coque reste dans l ecran`() {
+        for ((w, h) in screens) {
+            val l = LaunchLayout.compute(w, h)
+            val limit = LaunchLayout.boatLimit(w, l.boatSize, l.margin)
+            val hullHalf = l.boatSize * LaunchLayout.HULL_WIDTH_RATIO / 2f
+            val right = w / 2f + limit * w + hullHalf
+            val left = w / 2f - limit * w - hullHalf
+            assertTrue(right <= w - l.margin + 0.01f && left >= l.margin - 0.01f, "Coque hors écran en ${w}x$h")
+            assertTrue(limit > 0f, "Le bateau doit pouvoir bouger en ${w}x$h")
+        }
+    }
+
+    @Test fun `limite nulle si le bateau remplit l ecran`() {
+        assertEquals(0f, LaunchLayout.boatLimit(100, boatSize = 1000f, margin = 10f))
     }
 
     @Test fun `dimensions nulles ou negatives refusees`() {

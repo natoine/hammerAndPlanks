@@ -17,6 +17,12 @@ interface PlatformHooks {
     /** Appelé à l'affichage et à chaque changement de mode d'interaction, avec une phrase traduite à annoncer. */
     fun onInputModeChanged(announcement: String) {}
 
+    /**
+     * Appelé quand le bateau change de position, avec son décalage depuis le centre en fraction de la largeur
+     * d'écran (négatif à gauche). Sert aux tests d'interface du web.
+     */
+    fun onBoatMoved(offset: Float) {}
+
     /** Détection des manettes branchées. */
     val gamepads: GamepadDetector get() = GamepadDetector.NONE
 
@@ -25,4 +31,10 @@ interface PlatformHooks {
 
     /** Mode d'interaction imposé au lancement (outil de développement), ou null pour reprendre le mode sauvegardé. */
     val forcedInputMode: String? get() = null
+
+    /** Mode de contrôle du bateau imposé (position, velocity, force), ou null pour le réglage sauvegardé. */
+    val forcedControlMode: String? get() = null
+
+    /** Facteur de vitesse imposé dans [0, 1], ou null pour le réglage sauvegardé. */
+    val forcedSpeedFactor: String? get() = null
 }
