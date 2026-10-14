@@ -57,14 +57,22 @@ test.describe('pilotage par le corps (pose synthétique)', () => {
     await expect.poll(() => offset(page), { timeout: 20_000 }).toBeGreaterThan(0.02);
   });
 
-  test('pencher vers sa gauche envoie le bateau à gauche, se redresser le ramène au centre', async ({ page }) => {
+  test('mode position : pencher à gauche envoie le bateau à gauche, se redresser le ramène au centre', async ({ page }) => {
     await syntheticPose(page);
-    await toCameraMode(page);
+    await toCameraMode(page, '?control=position');
     await expect.poll(() => motionStatus(page), { timeout: 15_000 }).toBe('RUNNING');
     await page.evaluate(() => { (window as any).__tilt = -20; });
     await expect.poll(() => offset(page), { timeout: 20_000 }).toBeLessThan(-0.02);
     await page.evaluate(() => { (window as any).__tilt = 0; });
     await expect.poll(() => offset(page), { timeout: 20_000 }).toBeGreaterThan(-0.005);
+  });
+
+  test('mode élan (par défaut) : pencher à gauche fait filer le bateau à gauche', async ({ page }) => {
+    await syntheticPose(page);
+    await toCameraMode(page);
+    await expect.poll(() => motionStatus(page), { timeout: 15_000 }).toBe('RUNNING');
+    await page.evaluate(() => { (window as any).__tilt = -20; });
+    await expect.poll(() => offset(page), { timeout: 20_000 }).toBeLessThan(-0.1);
   });
 
   test('petite inclinaison ignorée (zone morte)', async ({ page }) => {
@@ -87,7 +95,7 @@ test.describe('pilotage par le corps (pose synthétique)', () => {
 
   test('hors mode caméra, l’inclinaison ne pilote pas', async ({ page }) => {
     await syntheticPose(page);
-    await toCameraMode(page);
+    await toCameraMode(page, '?control=position');
     await expect.poll(() => motionStatus(page), { timeout: 15_000 }).toBe('RUNNING');
     await page.keyboard.press('Tab'); // retour au clavier
     await expect.poll(() => motionStatus(page)).toBe('OFF');

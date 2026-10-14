@@ -8,6 +8,41 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.9.3] — 2026-10-14 — Élan : retour au centre à 60 % de la vitesse de pointe
+
+### Changed
+- Mode élan : vitesse de retour au centre plafonnée à 60 % de la vitesse de pointe (au lieu de 70 %). Retour du bord au centre en 2,4 s environ (au lieu de 2,1 s), contre 1,7 s du centre au bord.
+- README : réglage du mode élan.
+
+## [0.9.2] — 2026-10-14 — Élan : retour au centre plus lent que l'aller
+
+### Changed
+- Mode élan : la vitesse de retour au centre est plafonnée à 70 % de la vitesse de pointe (`MomentumTuning.returnSpeedRatio`, suit le facteur de vitesse). Le bateau revient un peu plus lentement qu'il n'est parti : 2,1 s du bord au centre contre 1,7 s du centre au bord. Avant, le rappel le relançait à 1,1 demi-rail/s, plus vite que la vitesse de pointe de l'aller (0,75). La glisse vers l'extérieur n'est pas bridée.
+- Tests unitaires : retour plus lent que l'aller, plafond de retour, plafond proportionnel au facteur de vitesse, glisse non bridée.
+- README : réglages du mode élan.
+
+## [0.9.1] — 2026-10-14 — Élan : vitesse divisée par 4 et retour au centre
+
+### Changed
+- Mode élan quatre fois moins rapide : vitesse de pointe 0,75 demi-rail/s (au lieu de 3) et poussée de départ 0,625 demi-rail/s² (au lieu de 2,5), pour garder le même profil d'accélération croissante. Du centre au bord en 2 à 3 s.
+- Contre-braquage : poussée ×6 (au lieu de ×4) et frottement de l'eau, pour rester plus efficace que de relâcher.
+- README : réglages du mode élan.
+
+### Fixed
+- Mode élan : le bateau revient tout seul au centre quand on relâche (rappel amorti, `MomentumTuning.centering` = 8, frottement 5) : légère glisse, puis retour en 1,5 s environ sans dépasser le centre. Réglable, 0 pour le désactiver.
+
+## [0.9.0] — 2026-10-14 — Mode élan : accélération continue
+
+### Added
+- Mode de contrôle « élan » (`MOMENTUM`), pour un pilotage plus nerveux : tant qu'on pousse dans la même direction, la poussée croît (×3 après 1,2 s) ; relâcher laisse glisser le bateau qui ralentit ; pousser à contresens freine fort (×4) ; le bateau rebondit un peu sur les bords ; vitesse de pointe huit fois celle de l'ancien jeu ; l'inclinaison suit la vitesse. L'axe analogique (stick, inclinaison du buste) dose la poussée. Valable au clavier, à la manette et en mode caméra, sur desktop, Android et web.
+- `MomentumTuning` : réglages de l'élan regroupés pour être ajustés au ressenti.
+- Tests unitaires (accélération croissante, vitesse de pointe, glisse, contre-braquage, remise à zéro de la poussée au changement de direction, axe analogique, bruit ignoré, rebond, rail, facteur de vitesse) et tests Playwright (élan au clavier, à la manette et par le corps).
+
+### Changed
+- Mode de contrôle par défaut : élan, au lieu de position. Les modes position, vitesse et force de l'ancien jeu restent disponibles (`-Pcontrol=position`, `?control=position`).
+- Tests Playwright du mode position : ils choisissent explicitement `?control=position`.
+- README : mode élan, procédure de test.
+
 ## [0.8.0] — 2026-10-14 — Pilotage par inclinaison du buste avec InstantHMR
 
 ### Added
@@ -183,3 +218,11 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que joueur à la manette, je veux déplacer mon bateau avec le stick gauche, avec les mêmes modes de contrôle qu'au clavier, afin de jouer confortablement à la manette.
 - `2026-10-14 | Déplacer le bateau à droite et à gauche par inclinaison du buste (ligne des épaules ou inclinaison de la tête) avec InstantHMR | pose/**, pose-onnx/**, gestures/**, input/src/main/kotlin/.../MotionInput.kt, game/src/main/kotlin/.../PlatformHooks.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../ui/*, assets/i18n/*, platform/desktop/**, platform/android/**, platform/web/**, models/README.md, models/checksums.txt, build.gradle.kts, settings.gradle.kts, gradle/libs.versions.toml, scripts/serve-web.mjs, scripts/serve-web.test.mjs, playwright.config.ts, e2e/boat-motion.spec.ts, package.json, README.md, CHANGELOG.md`
   - En tant que joueur, je veux diriger mon bateau en penchant le buste (ou la tête) devant la caméra, afin de jouer avec mon corps, sans manette ni clavier.
+- `2026-10-14 | Manque de fun : déplacement trop lisse, vitesse constante ; demande d'une accélération continue | game/src/main/kotlin/.../control/*, game/src/main/kotlin/.../launch/BoatMotion.kt, game/src/test/kotlin/.../control/ControlSettingsTest.kt, game/src/test/kotlin/.../launch/BoatMotionTest.kt, e2e/boat-keyboard.spec.ts, e2e/boat-gamepad.spec.ts, e2e/boat-motion.spec.ts, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux que mon bateau prenne de la vitesse tant que je le pousse et glisse sur son élan, afin de ressentir un pilotage vivant et amusant.
+- `2026-10-14 | Élan quatre fois trop rapide ; le bateau ne revient plus au centre tout seul | game/src/main/kotlin/.../launch/BoatMotion.kt, game/src/test/kotlin/.../launch/BoatMotionTest.kt, e2e/boat-keyboard.spec.ts, e2e/boat-gamepad.spec.ts, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux un bateau qui accélère sans filer trop vite et qui revient au centre quand je lâche les commandes, afin de garder le contrôle sans effort.
+- `2026-10-14 | Le bateau revient au centre plus vite qu'il ne part vers le bord ; le faire revenir un peu plus lentement | game/src/main/kotlin/.../launch/BoatMotion.kt, game/src/test/kotlin/.../launch/BoatMotionTest.kt, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux que mon bateau revienne au centre un peu plus lentement qu'il ne part vers le bord, afin que le retour paraisse naturel et ne me prenne pas de vitesse.
+- `2026-10-14 | Retour au centre encore trop rapide : essayer 60 % de la vitesse de pointe | game/src/main/kotlin/.../launch/BoatMotion.kt, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux un retour au centre nettement plus calme que l'aller, afin de sentir que c'est moi qui donne l'élan.

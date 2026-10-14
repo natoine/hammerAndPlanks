@@ -44,7 +44,7 @@ test('stick à droite : le bateau part à droite', async ({ page }) => {
 });
 
 test('stick relâché en mode position : le bateau revient au centre', async ({ page }) => {
-  await openWithGamepad(page);
+  await openWithGamepad(page, '?control=position');
   await setStick(page, 1);
   await expect.poll(() => offset(page), { timeout: 20_000 }).toBeGreaterThan(0.02);
   await setStick(page, 0);
@@ -52,7 +52,7 @@ test('stick relâché en mode position : le bateau revient au centre', async ({ 
 });
 
 test('stick à mi-course en mode position : le bateau s’arrête à mi-chemin du bord', async ({ page }) => {
-  await openWithGamepad(page);
+  await openWithGamepad(page, '?control=position');
   await setStick(page, 0.575); // (0,575 - 0,15) / 0,85 = 0,5 après zone morte
   const half = await settled(page);
   await setStick(page, 1);
@@ -60,6 +60,14 @@ test('stick à mi-course en mode position : le bateau s’arrête à mi-chemin d
   expect(full).toBeGreaterThan(0.05);
   expect(half / full).toBeGreaterThan(0.45);
   expect(half / full).toBeLessThan(0.55);
+});
+
+test('mode élan (par défaut) : stick relâché, le bateau revient au centre', async ({ page }) => {
+  await openWithGamepad(page);
+  await setStick(page, 1);
+  await expect.poll(() => offset(page), { timeout: 20_000 }).toBeGreaterThan(0.03);
+  await setStick(page, 0);
+  await expect.poll(() => offset(page), { timeout: 20_000 }).toBe(0);
 });
 
 test('légère dérive du stick ignorée (zone morte de l’ancien jeu)', async ({ page }) => {

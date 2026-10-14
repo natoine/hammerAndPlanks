@@ -5,8 +5,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ControlSettingsTest {
-    @Test fun `valeurs par defaut de l ancien jeu`() {
-        assertEquals(ControlSettings(MovementControlMode.POSITION, 1f), ControlSettings())
+    @Test fun `elan par defaut et facteur de vitesse de l ancien jeu`() {
+        assertEquals(ControlSettings(MovementControlMode.MOMENTUM, 1f), ControlSettings())
         assertEquals(ControlSettings(), ControlSettings.parse(null, null))
     }
 
@@ -14,6 +14,7 @@ class ControlSettingsTest {
         assertEquals(MovementControlMode.POSITION, ControlSettings.parse("position", null).mode)
         assertEquals(MovementControlMode.VELOCITY, ControlSettings.parse(" Velocity ", null).mode)
         assertEquals(MovementControlMode.FORCE, ControlSettings.parse("FORCE", null).mode)
+        assertEquals(MovementControlMode.MOMENTUM, ControlSettings.parse("momentum", null).mode)
     }
 
     @Test fun `facteur de vitesse lu dans 0 1`() {

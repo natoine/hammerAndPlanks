@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 
 // Le lanceur web expose la position du bateau sur le canvas (data-boat-offset) :
 // décalage depuis le centre en fraction de la largeur d'écran, négatif à gauche.
-// Mode de contrôle par défaut : position (comme l'ancien jeu) ; ?control=velocity|force pour les autres.
+// Mode de contrôle par défaut : élan (arcade) ; ?control=position|velocity|force pour les modes de l'ancien jeu.
 test.use({ locale: 'fr-FR' });
 
 const offset = async (page: Page) => Number((await page.locator('#canvas').getAttribute('data-boat-offset')) ?? 'NaN');
@@ -38,25 +38,51 @@ async function settled(page: Page) {
   return previous;
 }
 
-test.describe('mode position (par défaut)', () => {
-  test('flèche gauche : le bateau part à gauche', async ({ page }) => {
+test.describe('mode élan (par défaut)', () => {
+  // Vitesse réduite (?speed=0.5) : le bateau reste loin du bord pendant la mesure, même si le rendu est lent.
+  // La croissance de l'accélération est vérifiée par les tests unitaires (BoatMotionTest) : la cadence d'images
+  // d'un navigateur de test est trop irrégulière pour la mesurer ici.
+  test('flèche maintenue : le bateau file à droite', async ({ page }) => {
+    await open(page, '?speed=0.5');
+    await holdUntil(page, 'ArrowRight', (o) => o > 0.05);
+  });
+
+  test('relâcher : le bateau revient au centre tout seul', async ({ page }) => {
     await open(page);
+    await holdUntil(page, 'ArrowLeft', (o) => o < -0.05);
+    await expect.poll(() => offset(page), { timeout: 20_000 }).toBe(0);
+  });
+
+  test('le bateau ne sort jamais de l’écran', async ({ page }) => {
+    await open(page);
+    await page.keyboard.down('ArrowLeft');
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(400);
+      expect(await offset(page)).toBeGreaterThan(-0.5);
+    }
+    await page.keyboard.up('ArrowLeft');
+  });
+});
+
+test.describe('mode position (ancien jeu)', () => {
+  test('flèche gauche : le bateau part à gauche', async ({ page }) => {
+    await open(page, '?control=position');
     await holdUntil(page, 'ArrowLeft', (o) => o < -0.02);
   });
 
   test('flèche droite : le bateau part à droite', async ({ page }) => {
-    await open(page);
+    await open(page, '?control=position');
     await holdUntil(page, 'ArrowRight', (o) => o > 0.02);
   });
 
   test('relâcher : le bateau revient au centre', async ({ page }) => {
-    await open(page);
+    await open(page, '?control=position');
     await holdUntil(page, 'ArrowRight', (o) => o > 0.02);
     await expect.poll(() => offset(page), { timeout: 20_000 }).toBeLessThan(0.005);
   });
 
   test('le bateau ne sort jamais de l’écran', async ({ page }) => {
-    await open(page);
+    await open(page, '?control=position');
     await page.keyboard.down('ArrowLeft');
     for (let i = 0; i < 8; i++) {
       await page.waitForTimeout(500);
