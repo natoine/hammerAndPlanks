@@ -21,6 +21,7 @@ import com.naturalpad.hammerandplanks.HammerAndPlanksGame
 import com.naturalpad.hammerandplanks.PlatformHooks
 import com.naturalpad.hammerandplanks.sea.SeaRenderer
 import com.naturalpad.hammerandplanks.input.GameInput
+import com.naturalpad.hammerandplanks.input.GamepadSteering
 import com.naturalpad.hammerandplanks.input.InputMode
 import com.naturalpad.hammerandplanks.input.KeyboardSteering
 import com.naturalpad.hammerandplanks.ui.CameraPanel
@@ -194,12 +195,14 @@ class LaunchScreen(
         sea.draw(batch, layout.width.toFloat(), layout.height.toFloat(), time)
     }
 
-    /** Mode clavier : les flèches donnent le GameInput qui pilote le bateau. Manette et caméra ne sont pas encore branchées. */
+    /** Le mode d'interaction donne le GameInput qui pilote le bateau : flèches ou stick gauche. Caméra pas encore branchée. */
     private fun updateBoat(delta: Float) {
-        val input = if (game.inputModes.current == InputMode.KEYBOARD) {
-            KeyboardSteering.read(Gdx.input.isKeyPressed(Input.Keys.LEFT), Gdx.input.isKeyPressed(Input.Keys.RIGHT))
-        } else {
-            GameInput.IDLE
+        val input = when (game.inputModes.current) {
+            InputMode.KEYBOARD ->
+                KeyboardSteering.read(Gdx.input.isKeyPressed(Input.Keys.LEFT), Gdx.input.isKeyPressed(Input.Keys.RIGHT))
+            InputMode.GAMEPAD ->
+                if (game.gamepadConnected) GamepadSteering.read(platform.gamepads.leftStick()) else GameInput.IDLE
+            InputMode.MOTION -> GameInput.IDLE // caméra : chaîne de pose pas encore branchée
         }
         boatMotion.update(input, delta)
         val offset = boatOffset()

@@ -45,3 +45,9 @@ external fun reportBoatOffset(offset: Float)
 /** Paramètre de l'URL de la page (ex. ?control=velocity&speed=0.5), ou null. */
 @JSBody(params = ["name"], script = "return new URLSearchParams(window.location.search).get(name);")
 external fun urlParameter(name: String): String?
+
+@JSBody(script = "return window.hapGamepadStick ? window.hapGamepadStick()[0] : 0;")
+external fun gamepadStickX(): Float
+
+@JSBody(script = "return window.hapGamepadStick ? window.hapGamepadStick()[1] : 0;")
+external fun gamepadStickY(): Float

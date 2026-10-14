@@ -8,6 +8,17 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.7.0] — 2026-10-14 — Pilotage du bateau au stick de la manette
+
+### Added
+- Mode manette : le stick gauche pilote le bateau, avec les trois modes de contrôle (position, vitesse, force), le lissage et la vitesse de l'ancien jeu. En mode position, la course du stick désigne la position sur le rail : à mi-course, le bateau s'arrête à mi-chemin du bord.
+- `GamepadSteering` (module `:input`) : zone morte de l'ancien jeu (0,15 par axe, remise à l'échelle pour éviter un saut, comme les axes Unity X_0 et Y_0) et vecteur 2D borné à une longueur de 1 (comme `getLateralAxisInput`).
+- `GamepadDetector.leftStick()` : lecture du stick gauche par plateforme ; desktop via gdx-controllers, Android via gdx-controllers-android 2.2.4 (présence toujours via `InputDevice`), web via l'API Gamepad (mapping standard, axes 0 et 1).
+- Tests unitaires (zone morte, remise à l'échelle, diagonale, valeurs invalides) et tests Playwright avec manette simulée (gauche, droite, retour au centre, mi-course, dérive ignorée, mode vitesse, stick sans effet en mode clavier, flèches sans effet en mode manette).
+
+### Changed
+- README : pilotage à la manette, procédure de test par plateforme.
+
 ## [0.6.0] — 2026-10-14 — Contrôle du bateau repris de l'ancien jeu
 
 ### Added
@@ -145,3 +156,5 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que développeur, je veux savoir comment l'ancien jeu pilotait le bateau, afin de retrouver ses sensations.
 - `2026-10-14 | Reprise des trois modes de contrôle et du lissage de l'ancien jeu, inclinaison conservée | input/src/main/kotlin/.../GameInput.kt, input/src/main/kotlin/.../KeyboardSteering.kt, game/src/main/kotlin/.../control/*, game/src/main/kotlin/.../util/SmoothDamp.kt, game/src/main/kotlin/.../launch/BoatMotion.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../HammerAndPlanksGame.kt, game/src/main/kotlin/.../PlatformHooks.kt, platform/desktop/**, platform/web/**, input/src/test/**, game/src/test/**, e2e/boat-keyboard.spec.ts, README.md, CHANGELOG.md, package.json`
   - En tant que joueur, je veux retrouver les modes de contrôle de l'ancien jeu (position, vitesse, force) et sa douceur de déplacement, afin de piloter le bateau comme avant, avec le réglage adapté à mes capacités.
+- `2026-10-14 | Pilotage du bateau au joystick de la manette, comme au clavier | input/src/main/kotlin/.../GamepadSteering.kt, game/src/main/kotlin/.../platform/GamepadDetector.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, platform/desktop/src/main/kotlin/.../DesktopGamepads.kt, platform/android/**, platform/web/**, gradle/libs.versions.toml, input/src/test/**, e2e/boat-gamepad.spec.ts, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur à la manette, je veux déplacer mon bateau avec le stick gauche, avec les mêmes modes de contrôle qu'au clavier, afin de jouer confortablement à la manette.

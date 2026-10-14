@@ -18,6 +18,7 @@ gdx-platform = { module = "com.badlogicgames.gdx:gdx-platform", version.ref = "g
 gdx-freetype-platform = { module = "com.badlogicgames.gdx:gdx-freetype-platform", version.ref = "gdx" }
 gdx-teavm-backend = { module = "com.github.xpenatan.gdx-teavm:backend-teavm", version.ref = "gdxTeavm" }
 gdx-teavm-freetype = { module = "com.github.xpenatan.gdx-teavm:gdx-freetype-teavm", version.ref = "gdxTeavm" }
+gdx-controllers-android = { module = "com.badlogicgames.gdx-controllers:gdx-controllers-android", version.ref = "gdxControllers" }
 gdx-controllers-desktop = { module = "com.badlogicgames.gdx-controllers:gdx-controllers-desktop", version.ref = "gdxControllers" }
 webcam-capture = { module = "com.github.sarxos:webcam-capture", version.ref = "webcamCapture" }
 camerax-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }

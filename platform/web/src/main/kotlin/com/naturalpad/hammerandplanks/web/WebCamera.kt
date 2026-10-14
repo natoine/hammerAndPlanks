@@ -1,5 +1,6 @@
 package com.naturalpad.hammerandplanks.web
 
+import com.naturalpad.hammerandplanks.input.StickPosition
 import com.naturalpad.hammerandplanks.platform.CameraStatus
 import com.naturalpad.hammerandplanks.platform.CameraThumbnail
 import com.naturalpad.hammerandplanks.platform.GamepadDetector
@@ -22,4 +23,6 @@ class WebCamera : CameraThumbnail {
  */
 class WebGamepads : GamepadDetector {
     override fun isConnected(): Boolean = gamepadConnected()
+
+    override fun leftStick(): StickPosition = StickPosition(gamepadStickX(), gamepadStickY())
 }

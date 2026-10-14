@@ -39,6 +39,7 @@ kotlin {
 dependencies {
     implementation(project(":game"))
     implementation(libs.gdx.backend.android)
+    implementation(libs.gdx.controllers.android) // stick des manettes
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)

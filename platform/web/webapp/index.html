@@ -28,6 +28,17 @@
       return false;
     };
 
+    // Stick gauche de la première manette connectée (mapping standard : axes 0 et 1), centre sinon.
+    window.hapGamepadStick = function () {
+      if (!navigator.getGamepads) return [0, 0];
+      var pads = navigator.getGamepads();
+      for (var i = 0; i < pads.length; i++) {
+        var p = pads[i];
+        if (p && p.connected && p.axes && p.axes.length >= 2) return [p.axes[0], p.axes[1]];
+      }
+      return [0, 0];
+    };
+
     // Caméra à la demande : getUserMedia seulement au passage en mode caméra, flux coupé dès qu'on en sort.
     window.hapCamera = (function () {
       var status = "OFF", stream = null, video = null, wanted = false, placement = null;
