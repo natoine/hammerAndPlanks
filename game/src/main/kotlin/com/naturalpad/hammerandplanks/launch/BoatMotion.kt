@@ -8,7 +8,7 @@ import com.naturalpad.hammerandplanks.util.SmoothDamp
 /**
  * Déplacement latéral du bateau. Mode élan par défaut (arcade, voir [MomentumTuning]) ; modes position, vitesse
  * et force repris de PlayerHorizontalMovement de l'ancien jeu (lissage SmoothDamp de 0,6 s, vitesse maximale
- * de l'ancien jeu). Rail borné. Ajout : l'inclinaison dans le virage.
+ * de l'ancien jeu). Rail borné. Ajout : la proue s'oriente progressivement dans la direction du mouvement.
  *
  * Le mode position est un portage exact. Les modes vitesse et force reprennent l'intention et non la formule :
  * dans l'ancien code, la cible n'avançait que d'un pas d'image avant le lissage, si bien que le bateau ne
@@ -26,11 +26,14 @@ class BoatMotion(
     /** Vitesse maximale en demi-rails par seconde : 6 unités/s sur un rail de 32 dans l'ancien jeu. */
     val maxSpeed: Float = OLD_MAX_SPEED / OLD_HALF_RAIL,
     smoothTimeS: Float = 0.6f,
-    /** Inclinaison maximale du sprite à pleine vitesse, en degrés. */
-    val maxTiltDeg: Float = 14f,
+    /** Cap maximal de la proue, en degrés depuis la verticale (atteint à la vitesse de pointe : diagonale). */
+    val maxHeadingDeg: Float = 45f,
+    /** Temps de réponse du cap, en secondes : la proue tourne progressivement vers la direction prise. */
+    val headingSmoothingS: Float = 0.3f,
 ) {
     init {
         require(maxSpeed > 0f) { "Vitesse maximale invalide : $maxSpeed" }
+        require(maxHeadingDeg in 0f..90f && headingSmoothingS > 0f) { "Réglages de cap invalides" }
     }
 
     /** Lissage de la position (mode position) et de la vitesse (mode vitesse). */
@@ -47,14 +50,25 @@ class BoatMotion(
 
     private val speedCap: Float get() = maxSpeed * settings.speedFactor
 
-    /** Vitesse de référence de l'inclinaison : vitesse de pointe du mode courant. */
-    private val tiltSpeed: Float
+    /**
+     * Avancée de référence du bateau (il remonte l'écran) : la vitesse de pointe du mode courant.
+     * Le cap visé est la direction du mouvement composé de cette avancée et de la vitesse latérale.
+     */
+    private val forwardSpeed: Float
         get() = if (settings.mode == MovementControlMode.MOMENTUM) momentum.maxSpeed * settings.speedFactor else speedCap
 
-    /** Rotation du sprite en degrés (sens libGDX : positif = antihoraire, proue vers la gauche quand on va à gauche). */
-    val tiltDeg: Float
-        get() = if (velocity == 0f || tiltSpeed == 0f) 0f
-        else (-velocity / tiltSpeed).coerceIn(-1f, 1f) * maxTiltDeg
+    /**
+     * Cap visé, en degrés (sens libGDX : positif = antihoraire, proue vers la gauche quand on va à gauche) :
+     * direction du mouvement, 0 à l'arrêt, [maxHeadingDeg] (45°) à la vitesse de pointe.
+     */
+    val targetHeadingDeg: Float
+        get() = if (velocity == 0f || forwardSpeed == 0f) 0f
+        else Math.toDegrees(kotlin.math.atan2(-velocity.toDouble(), forwardSpeed.toDouble())).toFloat()
+            .coerceIn(-maxHeadingDeg, maxHeadingDeg)
+
+    /** Cap actuel de la proue, en degrés : rejoint progressivement [targetHeadingDeg]. */
+    var headingDeg: Float = 0f
+        private set
 
     /** Mode élan : durée de poussée continue dans la même direction, en secondes, et cette direction. */
     var holdTimeS: Float = 0f
@@ -85,10 +99,12 @@ class BoatMotion(
                 position += velocity * dt
             }
         }
-        // Le rail est borné : arrêt contre le bord, ou rebond en mode élan.
-        val restitution = if (settings.mode == MovementControlMode.MOMENTUM) momentum.bounce else 0f
-        if (position > 1f) { position = 1f; if (velocity > 0f) velocity = -velocity * restitution }
-        if (position < -1f) { position = -1f; if (velocity < 0f) velocity = -velocity * restitution }
+        // Le rail est borné : arrêt contre le bord ; en mode élan, rebond si on ne pousse pas vers ce bord
+        // (pousser contre le bord immobilise le bateau, proue redressée).
+        val bounce = if (settings.mode == MovementControlMode.MOMENTUM) momentum.bounce else 0f
+        if (position > 1f) { position = 1f; if (velocity > 0f) velocity = if (axis > 0f) 0f else -velocity * bounce }
+        if (position < -1f) { position = -1f; if (velocity < 0f) velocity = if (axis < 0f) 0f else -velocity * bounce }
+        updateHeading(dt)
     }
 
     /**
@@ -127,18 +143,28 @@ class BoatMotion(
         position += velocity * dt
     }
 
+    /** La proue tourne progressivement (lissage exponentiel) vers la direction du mouvement. */
+    private fun updateHeading(dt: Float) {
+        val target = targetHeadingDeg
+        headingDeg += (target - headingDeg) * (1f - kotlin.math.exp(-dt / headingSmoothingS))
+        if (target == 0f && kotlin.math.abs(headingDeg) < HEADING_SNAP_DEG) headingDeg = 0f
+    }
+
     /** Ramène le bateau au centre, immobile. */
     fun reset() {
         position = 0f
         velocity = 0f
         holdTimeS = 0f
         holdDirection = 0f
+        headingDeg = 0f
         positionDamp.reset()
         velocityDamp.reset()
     }
 
     companion object {
         const val MAX_STEP_S = 0.1f
+        /** En dessous, la proue est considérée droite. */
+        const val HEADING_SNAP_DEG = 0.05f
         /** Valeurs de l'ancien jeu, en unités Unity : PlayerHorizontalMovement.maxPlayerSpeed et demi-largeur du rail. */
         const val OLD_MAX_SPEED = 6f
         const val OLD_HALF_RAIL = 16f
