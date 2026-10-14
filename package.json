@@ -1,0 +1,20 @@
+{
+  "name": "hammer-and-planks",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Vertical shooter de pirates piloté par le corps (libGDX, Kotlin). Ce fichier porte la version unique du projet, lue par Gradle.",
+  "scripts": {
+    "desktop": "./gradlew :platform:desktop:run",
+    "android": "./gradlew :platform:android:installDebug",
+    "web:build": "./gradlew :platform:web:buildWeb",
+    "web:serve": "http-server platform/web/build/dist/webapp -p 8080 -c-1",
+    "web": "npm run web:build && npm run web:serve",
+    "test": "./gradlew test",
+    "test:e2e": "playwright test",
+    "version:check": "node scripts/check-version.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "http-server": "^14.1.1"
+  }
+}

@@ -32,6 +32,78 @@ Assets 3D	Plutôt sprites pré-rendus depuis des modèles 3D (rendu 2D dans un m
 Moteur de jeu	libGDX en Kotlin. Lanceurs : Android, iOS (MobiVM, fork maintenu de RoboVM), web (TeaVM via gdx-teavm), desktop LWJGL3 pour le développement
 Backend web	TeaVM plutôt que Kotlin/JS ou Kotlin/Wasm : le backend GWT de libGDX n'accepte pas Kotlin, TeaVM compile le bytecode JVM (Kotlin compris) en JS ou Wasm
 
+3. Démarrer, lancer et tester
+
+État actuel (0.1.0) : écran de lancement sur desktop, Android et navigateur. Seuls les modules :game et :platform:desktop, :platform:android, :platform:web existent ; les autres modules de la section 4 seront créés au fil des besoins. iOS (MobiVM) demande un Mac pour compiler et n'est pas encore branché.
+
+Prérequis : JDK 17 ou plus (testé avec 21), Node 22 et npm, SDK Android (chemin dans local.properties, non versionné : `sdk.dir=/chemin/vers/Android/Sdk`). Gradle est fourni par le wrapper (./gradlew).
+
+La version du projet est dans package.json, seule source de vérité : Gradle la lit pour l'APK et l'écran de lancement. `npm run version:check` vérifie qu'elle correspond à la dernière release du CHANGELOG.
+
+```bash
+npm install                      # outils web et tests d'interface (Playwright, http-server)
+npx playwright install chromium  # navigateur des tests d'interface, une seule fois
+
+npm run desktop                  # fenêtre desktop 540x960, langue du système
+./gradlew :platform:desktop:run -Plang=en -Psize=1920x1080   # forcer la langue et la taille
+./gradlew :platform:desktop:run -Pscreenshot=/tmp/capture.png  # capture après 3 s puis fermeture
+
+npm run android                  # installe l'APK de debug sur le téléphone branché (débogage USB activé)
+./gradlew :platform:android:assembleDebug   # APK seul : platform/android/build/outputs/apk/debug/
+
+npm run web                      # compile en JavaScript (TeaVM) puis sert sur http://localhost:8080
+                                 # le CHANGELOG est servi sur http://localhost:8080/changelog/
+
+npm test                         # tests unitaires (JUnit 5) de tous les modules
+npm run web:build && npm run test:e2e   # tests d'interface Playwright (Chromium desktop et mobile)
+```
+
+Comment tester l'écran de lancement, plateforme par plateforme
+
+Résultat attendu partout : la mer défile lentement vers le bas, le bateau (vue 3/4, proue vers le haut) tangue au centre, le titre « Hammer and Planks » puis l'accroche apparaissent en fondu en haut, la version s'affiche en bas à droite. L'accroche est en français sur un système ou un navigateur en français, en anglais sinon.
+
+Desktop (le plus rapide, pour le développement)
+1. `npm run desktop` : une fenêtre portrait 540x960 s'ouvre.
+2. Redimensionner la fenêtre (y compris en paysage) : le bateau et les textes se recalent sans se chevaucher.
+3. Tester l'autre langue : `./gradlew :platform:desktop:run -Plang=en` (ou `-Plang=fr`).
+4. Tester une taille précise : `-Psize=360x640` (petit téléphone), `-Psize=1920x1080` (écran PC).
+
+Android
+1. Sur le téléphone : Paramètres > À propos > appuyer 7 fois sur « Numéro de build », puis Options pour les développeurs > activer « Débogage USB ».
+2. Brancher le téléphone en USB, accepter l'autorisation sur le téléphone, vérifier qu'il apparaît avec `adb devices` (adb est dans platform-tools du SDK Android).
+3. `npm run android` installe l'application « Hammer and Planks » ; la lancer depuis le téléphone.
+4. Sans câble : `./gradlew :platform:android:assembleDebug`, puis copier `platform/android/build/outputs/apk/debug/android-debug.apk` sur le téléphone et l'ouvrir (autoriser l'installation d'applications inconnues).
+5. Sans téléphone : créer un émulateur dans Android Studio (Device Manager), le démarrer, puis `npm run android`.
+6. Tester l'autre langue : changer la langue du téléphone, puis relancer l'application.
+
+Navigateur (version web)
+1. `npm run web` compile le jeu en JavaScript puis le sert ; ouvrir http://localhost:8080 (arrêt du serveur : Ctrl+C).
+2. Format mobile : outils de développement du navigateur (F12) > mode appareil, choisir un téléphone, recharger la page.
+3. Tester l'autre langue : changer la langue préférée du navigateur (paramètres > langues), puis recharger.
+4. Le CHANGELOG est consultable sur http://localhost:8080/changelog/.
+
+Tests automatisés
+1. `npm test` : tests unitaires (langue, traductions, mise en page sur plusieurs tailles d'écran, animations, sprites, options desktop).
+2. `npm run web:build && npm run test:e2e` : tests Playwright de la version web, en Chromium desktop et mobile, avec des navigateurs en français, en anglais et en allemand (repli sur l'anglais).
+3. `npm run version:check` : la version de package.json correspond à la dernière release du CHANGELOG.
+
+Structure actuelle :
+
+```
+game/                 cœur libGDX partagé : HammerAndPlanksGame, PlatformHooks, Languages, Texts,
+                      launch/ (LaunchScreen, LaunchLayout, LaunchAnimation, BoatFrames)
+platform/desktop/     lanceur LWJGL3 (options --lang, --size, --screenshot)
+platform/android/     lanceur Android (portrait, plein écran immersif)
+platform/web/         lanceur TeaVM, interop navigateur (langue, accessibilité), webapp/index.html
+assets/               sprites, mer, polices OFL, i18n/messages*.properties (en par défaut, fr)
+e2e/                  tests Playwright de la version web
+package.json          version unique et scripts
+```
+
+Internationalisation : aucun texte en dur dans le code. Les textes sont dans assets/i18n/messages.properties (anglais, langue de repli) et messages_fr.properties. La langue vient du système (desktop, Android) ou du navigateur (web) ; toute langue non supportée retombe sur l'anglais. Un test vérifie que toutes les langues ont les mêmes clés.
+
+Polices : Pirata One (titre) et Nunito (textes), sous licence SIL OFL, fichiers de licence dans assets/fonts/. Les polices de l'ancien jeu (MV Boli, Aparajita…) sont des polices Microsoft non redistribuables et ne sont pas reprises.
+
 4. Architecture cible
 
 Modules Gradle indépendants. Le gameplay et les gestes ne dépendent ni d'Android, ni d'iOS, ni de libGDX pour rester testables sur PC.
@@ -177,7 +249,34 @@ Tests : module Kotlin pur, testable sans moteur ni téléphone.
 9. Assets et direction artistique
 Modèles 3D créés dans Blender, rendus en sprites ou sprite sheets (rotation du bateau, tir, explosion) pour un rendu 2D dans un moteur 2D. Aucun changement d'architecture ; coût de perf minimal.
 Passer à de la vraie 3D temps réel (Three.js, Unity 3D, etc.) n'est justifié que pour une caméra dynamique, une mer qui ondule en temps réel ou de la lumière dynamique. C'est un saut de périmètre.
-Les assets de l'ancien jeu Unity sont potentiellement réutilisables
+Les assets de l'ancien jeu Unity (dépôt HammerAndPlanks) sont réutilisables : droits confirmés par NaturalPad. Seuls les textes dessinés dans les images sont écartés (contraire à l'i18n). Les modèles 3D (FBX) sont rendus en sprites via des scripts Blender en ligne de commande.
+
+Pipeline Blender → sprites
+
+Les sources 3D sont dans assets-src/boats/<bateau>/ (FBX coque et voile, textures). Le script assets-src/blender/render_boat.py les rend en PNG transparents, avec un éclairage cartoon à 3 paliers qui reprend le shader de l'ancien jeu. Les rendus vont dans assets-src/**/render/, ignoré par git. Les sprites retenus sont ensuite copiés dans assets/.
+
+```bash
+# Prérequis : Blender 4.2+ (testé en 5.2 LTS), installé par exemple avec `sudo snap install blender --classic`
+blender -b --python assets-src/blender/render_boat.py -- \
+  --hull assets-src/boats/player/Boat_player.fbx --hull-tex assets-src/boats/player/Boat_player.png \
+  --sail assets-src/boats/player/Boat_player_Voile.fbx --sail-tex assets-src/boats/player/Boat_player_voile.png \
+  --view top --size 512 --angles 1 --out assets-src/boats/player/render/boat_player
+
+# Tests du script (Python 3 + Pillow, Blender dans le PATH)
+python3 assets-src/blender/test_render_boat.py -v
+```
+
+Options : --view top (dessus) ou 34 (caméra inclinée à 35°), --angles N pour N rotations autour de l'axe vertical (sprite sheet de virage), --size en pixels.
+
+Vue retenue : 3/4. Le sprite du bateau joueur est rendu en 8 rotations de 512 px, copiées dans assets/boats/player/boat_player_34_00.png à _07.png. L'image 00 a la proue vers le haut de l'écran. Chaque image suivante tourne de 45° dans le sens inverse des aiguilles d'une montre : 02 proue à gauche, 04 proue en bas, 06 proue à droite.
+
+```bash
+blender -b --python assets-src/blender/render_boat.py -- \
+  --hull assets-src/boats/player/Boat_player.fbx --hull-tex assets-src/boats/player/Boat_player.png \
+  --sail assets-src/boats/player/Boat_player_Voile.fbx --sail-tex assets-src/boats/player/Boat_player_voile.png \
+  --view 34 --size 512 --angles 8 --out assets-src/boats/player/render/boat_player
+cp assets-src/boats/player/render/boat_player_34_0*.png assets/boats/player/
+```
 
 12. Conventions de travail avec Claude Code
 Garder :input, :camera, :pose, :gestures, :levelgen et :agents en Kotlin pur (sans dépendance Android, iOS ni libGDX) pour les tester sur PC.

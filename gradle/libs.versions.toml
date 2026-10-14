@@ -1,0 +1,23 @@
+[versions]
+kotlin = "2.4.21"
+agp = "9.4.1"
+gdx = "1.14.0"
+gdxTeavm = "1.4.0"
+junit = "5.13.4"
+
+[libraries]
+gdx = { module = "com.badlogicgames.gdx:gdx", version.ref = "gdx" }
+gdx-freetype = { module = "com.badlogicgames.gdx:gdx-freetype", version.ref = "gdx" }
+gdx-backend-lwjgl3 = { module = "com.badlogicgames.gdx:gdx-backend-lwjgl3", version.ref = "gdx" }
+gdx-backend-android = { module = "com.badlogicgames.gdx:gdx-backend-android", version.ref = "gdx" }
+gdx-platform = { module = "com.badlogicgames.gdx:gdx-platform", version.ref = "gdx" }
+gdx-freetype-platform = { module = "com.badlogicgames.gdx:gdx-freetype-platform", version.ref = "gdx" }
+gdx-teavm-backend = { module = "com.github.xpenatan.gdx-teavm:backend-teavm", version.ref = "gdxTeavm" }
+gdx-teavm-freetype = { module = "com.github.xpenatan.gdx-teavm:gdx-freetype-teavm", version.ref = "gdxTeavm" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+android-application = { id = "com.android.application", version.ref = "agp" }

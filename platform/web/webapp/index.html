@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14213d">
+  <title>Hammer and Planks</title>
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: #14213d; }
+    body { display: flex; justify-content: center; align-items: center; touch-action: none; }
+    #canvas { display: block; border: none; outline: none; }
+  </style>
+</head>
+<body oncontextmenu="return false">
+  <!-- Le libellé et la langue sont fixés par le jeu (WebLauncher), traduits selon le navigateur. -->
+  <canvas id="canvas"></canvas>
+  <script>window.addEventListener("load", function () { main(); });</script>
+  <script src="app.js"></script>
+</body>
+</html>
