@@ -60,7 +60,7 @@ npm run web:build && npm run test:e2e   # tests d'interface Playwright (Chromium
 
 Comment tester l'écran de lancement, plateforme par plateforme
 
-Résultat attendu partout : la mer défile lentement vers le bas avec des vagues et des lignes d'écume qui ondulent, le bateau (vue 3/4, proue vers le haut) tangue au centre, le titre « Hammer and Planks » puis l'accroche apparaissent en fondu en haut, la version s'affiche en bas à droite. L'accroche est en français sur un système ou un navigateur en français, en anglais sinon.
+Résultat attendu partout : la mer défile lentement vers le bas avec des vagues et des lignes d'écume qui ondulent, le bateau (vue 3/4, proue vers le haut) tangue au centre, le titre « Hammer and Planks » puis l'accroche apparaissent en fondu en haut, la version s'affiche en bas à droite. En bas à gauche, un badge indique le mode d'interaction (clavier par défaut) : Tab passe à manette, caméra, puis de nouveau clavier ; un appui sur le badge fait de même. Le mode choisi est retrouvé au lancement suivant. L'accroche est en français sur un système ou un navigateur en français, en anglais sinon.
 
 Desktop (le plus rapide, pour le développement)
 1. `npm run desktop` : une fenêtre portrait 540x960 s'ouvre.
@@ -90,12 +90,14 @@ Tests automatisés
 Structure actuelle :
 
 ```
+input/                Kotlin pur : InputMode, InputModeSelector (bascule et sauvegarde du mode)
 game/                 cœur libGDX partagé : HammerAndPlanksGame, PlatformHooks, Languages, Texts,
-                      launch/ (LaunchScreen, LaunchLayout, LaunchAnimation, BoatFrames)
+                      launch/ (LaunchScreen, LaunchLayout, LaunchAnimation, BoatFrames),
+                      sea/ (SeaRenderer, SeaWaves), ui/ (InputModeBadge)
 platform/desktop/     lanceur LWJGL3 (options --lang, --size, --screenshot)
 platform/android/     lanceur Android (portrait, plein écran immersif)
 platform/web/         lanceur TeaVM, interop navigateur (langue, accessibilité), webapp/index.html
-assets/               sprites, mer, polices OFL, i18n/messages*.properties (en par défaut, fr)
+assets/               sprites, mer, shaders, pictos ui/, polices OFL, i18n/messages*.properties (en par défaut, fr)
 e2e/                  tests Playwright de la version web
 package.json          version unique et scripts
 ```
@@ -177,6 +179,7 @@ interface InputSource { val inputs: Flow<GameInput>; val mode: InputMode }
 enum class InputMode { MOTION, TOUCH, KEYBOARD, GAMEPAD }
 Dénominateur commun : tout le gameplay doit être jouable avec un axe 2D et trois boutons (tir, tir spécial, interaction). Les actions non violentes passent par interact ; en capture de mouvement, un geste dédié (par exemple les mains ouvertes ou levées) doit pouvoir le déclencher. Un mode peut ajouter des bonus facultatifs (par exemple se pencher vers l'écran pour un tir spécial en mocap) via extras, mais aucun niveau ne doit les exiger.
 Sélection et bascule : le joueur choisit son mode au premier lancement et peut le changer depuis le menu, voire en cours de partie (hot-swap).
+Implémenté (0.3.0) : module :input avec InputMode { KEYBOARD, GAMEPAD, MOTION } et InputModeSelector. Le clavier (flèches gauche et droite) est le mode par défaut. Un badge en bas à gauche de l'écran affiche le picto et le nom du mode courant ; Tab fait défiler clavier, manette, caméra, et un appui sur le badge fait de même sur les écrans tactiles. Le choix est sauvegardé (Preferences libGDX, localStorage sur le web). Sur le web, chaque changement est annoncé aux lecteurs d'écran (zone aria-live). Le mode tactile (TOUCH) n'est pas encore dans la liste ; les modes manette et caméra ne sont pour l'instant qu'affichés, la lecture du joystick et de la caméra reste à brancher.
 Caméra à la demande : la permission caméra, la calibration et le chargement du modèle de pose ne se déclenchent que si le mode capture de mouvement est choisi. Un joueur au tactile, au clavier ou à la manette n'a donc jamais à accorder l'accès à sa caméra.
 Tactile : mode par défaut sur un smartphone sans périphérique.
 Clavier et manette : sur Android, ce sont des périphériques Bluetooth ou USB. Les gérer via les événements d'entrée standard. Le clavier et la manette concernent surtout les tablettes, les appareils Android TV, les ChromeOS et les smartphones avec manette clipsable.
@@ -254,6 +257,15 @@ Les assets de l'ancien jeu Unity (dépôt HammerAndPlanks) sont réutilisables :
 Mer animée
 
 La mer reprend le shader de l'ancien jeu Unity (Assets/Shaders/PerlinNormalHeight.shader) : une turbulence de bruit 3D donne une hauteur de vague qui fait onduler la texture (parallaxe) et dessine l'écume sur les crêtes ; la 3e dimension du bruit fait évoluer les vagues sur place. Portage en GLSL ES 1.0 dans assets/shaders/sea.frag (Android, iOS, desktop, WebGL 1), bruit simplex calculé dans le shader (webgl-noise, MIT). Les réglages sont dans game/.../sea/SeaWaves.kt ; ceux de l'ancien matériau sont conservés (couleur et bande d'écume, lacunarité 2, gain 0,5, phase 0,2/s). Seules différences : 4 octaves au lieu de 5 et pas d'éclairage, effet négligeable en vue de dessus. Si le shader ne compile pas sur un appareil, la mer s'affiche sans vagues (repli journalisé). Coût GPU à mesurer sur un téléphone d'entrée de gamme : le nombre d'octaves est le premier levier.
+
+Pictos de l'interface
+
+Les pictos des modes d'interaction (assets/ui/input_*.png, blancs, 128 px, teintés au dessin) sont rendus depuis la police Material Icons (Google, Apache 2.0, source et licence dans assets-src/ui/). La police n'est pas embarquée : libGDX ne sait pas générer une police sans lettres.
+
+```bash
+python3 assets-src/ui/render_icons.py           # régénère assets/ui/input_*.png
+python3 assets-src/ui/test_render_icons.py -v   # tests du script (Pillow)
+```
 
 Pipeline Blender → sprites
 

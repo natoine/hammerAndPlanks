@@ -10,7 +10,7 @@ import kotlin.math.floor
 data class SeaWaves(
     /** Vitesse d'évolution des vagues sur place, en unités de bruit par seconde (ancien jeu : 0,2). */
     val phaseSpeed: Float = 0.2f,
-    /** Fréquences du bruit par largeur d'écran. Plus serré en y : crêtes de vagues allongées horizontalement. */
+    /** Fréquences du bruit par petit côté de l'écran. Plus serré en y : crêtes de vagues allongées horizontalement. */
     val noiseScaleX: Float = 1.6f,
     val noiseScaleY: Float = 6.5f,
     /** Octaves de turbulence : 5 dans l'ancien jeu, 4 ici pour ménager les téléphones (le 5e est un détail fin). */
@@ -18,7 +18,7 @@ data class SeaWaves(
     /** Lacunarité et gain de la turbulence (ancien _PerlinParams : 2 ; 0,5). */
     val lacunarity: Float = 2f,
     val gain: Float = 0.5f,
-    /** Amplitude du décalage de texture par la hauteur de vague, en fraction de la largeur d'écran. */
+    /** Amplitude du décalage de texture par la hauteur de vague, en fraction du petit côté de l'écran. */
     val parallaxFraction: Float = 0.03f,
     /** Bande d'écume : position, largeur, lissage (ancien _HeightBandPos, _HeightBandWidth, _HeightSmoothBand). */
     val foamBandPos: Float = 1f,
@@ -42,16 +42,16 @@ data class SeaWaves(
     fun phase(timeS: Float): Float = wrapNoise(timeS * phaseSpeed)
 
     /**
-     * Décalage vertical du bruit pour qu'il défile avec la texture : [scrolledPx] pixels de défilement
-     * sur un écran de [screenWidthPx] de large. Ramené dans [0, 289[.
+     * Décalage vertical du bruit pour qu'il défile avec la texture : [scrolledPx] pixels de défilement,
+     * [unitPx] étant le petit côté de l'écran. Ramené dans [0, 289[.
      */
-    fun noiseOffset(scrolledPx: Float, screenWidthPx: Float): Float {
-        require(screenWidthPx > 0f) { "Largeur d'écran invalide : $screenWidthPx" }
-        return wrapNoise(scrolledPx / screenWidthPx * noiseScaleY)
+    fun noiseOffset(scrolledPx: Float, unitPx: Float): Float {
+        require(unitPx > 0f) { "Unité de bruit invalide : $unitPx" }
+        return wrapNoise(scrolledPx / unitPx * noiseScaleY)
     }
 
-    /** Amplitude de la parallaxe en pixels pour un écran de [screenWidthPx] de large. */
-    fun parallaxPx(screenWidthPx: Float): Float = parallaxFraction * screenWidthPx
+    /** Amplitude de la parallaxe en pixels, [unitPx] étant le petit côté de l'écran. */
+    fun parallaxPx(unitPx: Float): Float = parallaxFraction * unitPx
 
     /**
      * Poids de l'écume pour une hauteur de vague [h], identique à la formule du shader.

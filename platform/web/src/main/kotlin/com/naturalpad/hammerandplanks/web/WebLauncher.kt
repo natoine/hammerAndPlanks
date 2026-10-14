@@ -16,6 +16,8 @@ object WebLauncher {
             override fun onLaunchScreenShown(language: String, title: String, tagline: String) {
                 describePage(language, "$title - $tagline")
             }
+
+            override fun onInputModeChanged(announcement: String) = announce(announcement)
         }
         val config = TeaApplicationConfiguration("canvas").apply {
             width = 0 // 0 = toute la fenêtre, redimensionnée avec elle

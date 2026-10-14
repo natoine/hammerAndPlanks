@@ -57,11 +57,13 @@ class SeaRenderer(private val waves: SeaWaves = SeaWaves()) {
         program.setUniformf(SeaUniforms.TILE_HEIGHT, tileHeight * scale)
         program.setUniformf(SeaUniforms.SEA_OFFSET, offset * scale)
         program.setUniformf(SeaUniforms.NOISE_SCALE, waves.noiseScaleX, waves.noiseScaleY)
-        program.setUniformf(SeaUniforms.NOISE_OFFSET, waves.noiseOffset(scrolledPx, fbWidth))
+        val noiseUnit = minOf(fbWidth, Gdx.graphics.backBufferHeight.toFloat())
+        program.setUniformf(SeaUniforms.NOISE_UNIT, noiseUnit)
+        program.setUniformf(SeaUniforms.NOISE_OFFSET, waves.noiseOffset(scrolledPx, noiseUnit))
         program.setUniformf(SeaUniforms.PHASE, waves.phase(timeS))
         program.setUniformf(SeaUniforms.OCTAVES, waves.octaves.toFloat())
         program.setUniformf(SeaUniforms.PERLIN_PARAMS, waves.lacunarity, waves.gain)
-        program.setUniformf(SeaUniforms.PARALLAX_PX, waves.parallaxPx(fbWidth))
+        program.setUniformf(SeaUniforms.PARALLAX_PX, waves.parallaxPx(noiseUnit))
         program.setUniformf(SeaUniforms.FOAM_BAND, waves.foamBandPos, waves.foamBandWidth, waves.foamSmoothBand)
         program.setUniformf(SeaUniforms.FOAM_COLOR, waves.foamR, waves.foamG, waves.foamB, waves.foamIntensity)
         // Un seul quad plein écran : le shader calcule lui-même les coordonnées de texture.
@@ -95,6 +97,7 @@ object SeaUniforms {
     const val SCREEN_SIZE = "u_screenSize"
     const val TILE_HEIGHT = "u_tileHeight"
     const val SEA_OFFSET = "u_seaOffset"
+    const val NOISE_UNIT = "u_noiseUnit"
     const val NOISE_SCALE = "u_noiseScale"
     const val NOISE_OFFSET = "u_noiseOffset"
     const val PHASE = "u_phase"
@@ -105,7 +108,7 @@ object SeaUniforms {
     const val FOAM_COLOR = "u_foamColor"
 
     val ALL = listOf(
-        SCREEN_SIZE, TILE_HEIGHT, SEA_OFFSET, NOISE_SCALE, NOISE_OFFSET, PHASE,
+        SCREEN_SIZE, TILE_HEIGHT, SEA_OFFSET, NOISE_UNIT, NOISE_SCALE, NOISE_OFFSET, PHASE,
         OCTAVES, PERLIN_PARAMS, PARALLAX_PX, FOAM_BAND, FOAM_COLOR,
     )
 }

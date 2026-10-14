@@ -10,4 +10,7 @@ interface PlatformHooks {
 
     /** Appelé quand l'écran de lancement s'affiche, avec les textes traduits (accessibilité web, par exemple). */
     fun onLaunchScreenShown(language: String, title: String, tagline: String) {}
+
+    /** Appelé à l'affichage et à chaque changement de mode d'interaction, avec une phrase traduite à annoncer. */
+    fun onInputModeChanged(announcement: String) {}
 }

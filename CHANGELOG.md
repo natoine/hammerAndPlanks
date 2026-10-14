@@ -8,6 +8,23 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.3.0] — 2026-10-14 — Mode d'interaction : badge et bascule par Tab
+
+### Added
+- Module Kotlin pur `:input` : `InputMode` (clavier, manette, caméra) et `InputModeSelector` (bascule cyclique, clavier par défaut, lecture tolérante d'une valeur sauvegardée).
+- Badge du mode d'interaction en bas à gauche de l'écran de lancement : picto, nom du mode traduit, indication pour changer (« Tab » au clavier, « Touchez » sur écran tactile). Tab ou un appui sur le badge passe au mode suivant (desktop, Android, web).
+- Sauvegarde du mode choisi entre deux lancements (Preferences libGDX ; localStorage sur le web).
+- Web : annonce du mode aux lecteurs d'écran (zone `aria-live` `#input-mode`).
+- Pictos clavier, manette et caméra (`assets/ui/input_*.png`) rendus depuis Material Icons (Apache 2.0) par `assets-src/ui/render_icons.py`, avec ses tests.
+- Traductions fr et en des modes, des indications et de l'annonce.
+- Tests unitaires du sélecteur de mode, de la mise en page du badge et des traductions ; tests Playwright de la bascule par Tab, de l'appui sur le badge, de la sauvegarde et de l'annonce en français et en anglais.
+
+### Fixed
+- Mer animée : la taille des vagues se calcule sur le petit côté de l'écran, et non plus sur sa largeur, pour éviter des vagues démesurées en paysage.
+
+### Changed
+- README : modes d'interaction implémentés, pictos de l'interface, structure du projet.
+
 ## [0.2.0] — 2026-10-14 — Mer animée : vagues et écume
 
 ### Added
@@ -74,3 +91,5 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que joueur, je veux retrouver la mer animée de l'ancien jeu, afin de reconnaître son univers visuel.
 - `2026-10-14 | Implémentation de la mer animée (portage du shader de vagues) | assets/shaders/sea.vert, assets/shaders/sea.frag, game/src/main/kotlin/.../sea/SeaWaves.kt, game/src/main/kotlin/.../sea/SeaRenderer.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/test/kotlin/.../sea/*, e2e/launch-screen.spec.ts, README.md, CHANGELOG.md, package.json`
   - En tant que joueur, je veux voir des vagues et de l'écume bouger sur la mer dès l'écran de lancement, sur téléphone, ordinateur et navigateur, afin de retrouver l'ambiance de l'ancien jeu.
+- `2026-10-14 | Picto du mode d'interaction en bas à gauche, bascule par Tab entre clavier (flèches), manette et caméra | input/**, settings.gradle.kts, game/build.gradle.kts, game/src/main/kotlin/.../HammerAndPlanksGame.kt, game/src/main/kotlin/.../PlatformHooks.kt, game/src/main/kotlin/.../ui/*, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../sea/*, assets/shaders/sea.frag, assets/i18n/*, assets/ui/*, assets-src/ui/*, platform/web/**, e2e/input-mode.spec.ts, game/src/test/kotlin/.../ui/*, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux voir en bas à gauche de l'écran quel mode d'interaction j'utilise (clavier, manette ou caméra) et en changer avec la touche Tab, ou en touchant le picto sur téléphone, afin de jouer avec le périphérique de mon choix.

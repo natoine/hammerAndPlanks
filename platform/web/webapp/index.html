@@ -9,11 +9,14 @@
     html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: #14213d; }
     body { display: flex; justify-content: center; align-items: center; touch-action: none; }
     #canvas { display: block; border: none; outline: none; }
+    /* Lisible par les lecteurs d'écran, invisible à l'écran. */
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   </style>
 </head>
 <body oncontextmenu="return false">
   <!-- Le libellé et la langue sont fixés par le jeu (WebLauncher), traduits selon le navigateur. -->
   <canvas id="canvas"></canvas>
+  <p id="input-mode" class="visually-hidden" aria-live="polite"></p>
   <script>window.addEventListener("load", function () { main(); });</script>
   <script src="app.js"></script>
 </body>

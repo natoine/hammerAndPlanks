@@ -15,6 +15,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "hammerAndPlanks"
 
+include(":input")
 include(":game")
 include(":platform:desktop")
 include(":platform:android")

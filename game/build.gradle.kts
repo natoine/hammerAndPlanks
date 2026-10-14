@@ -39,6 +39,7 @@ sourceSets["main"].kotlin.srcDir(generatedDir)
 tasks.named("compileKotlin") { dependsOn(generateBuildInfo) }
 
 dependencies {
+    api(project(":input"))
     api(libs.gdx)
     api(libs.gdx.freetype)
 

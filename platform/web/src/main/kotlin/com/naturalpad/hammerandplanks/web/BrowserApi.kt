@@ -15,3 +15,7 @@ external fun browserLanguage(): String?
         "document.getElementById('canvas').setAttribute('aria-label', description);",
 )
 external fun describePage(language: String, description: String)
+
+/** Annonce le mode d'interaction dans une zone aria-live (lue par les lecteurs d'écran). */
+@JSBody(params = ["text"], script = "var e = document.getElementById('input-mode'); if (e) { e.textContent = text; }")
+external fun announce(text: String)

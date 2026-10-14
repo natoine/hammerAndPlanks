@@ -19,7 +19,8 @@ uniform sampler2D u_texture;
 uniform vec2 u_screenSize;       // taille du framebuffer en pixels
 uniform float u_tileHeight;      // hauteur à l'écran d'une tuile de texture (pixels)
 uniform float u_seaOffset;       // défilement de la texture, dans [0, u_tileHeight[
-uniform vec2 u_noiseScale;       // fréquences du bruit, par largeur d'écran (x, y)
+uniform float u_noiseUnit;       // unité du bruit en pixels : petit côté de l'écran (même taille de vagues en portrait et paysage)
+uniform vec2 u_noiseScale;       // fréquences du bruit, par unité de bruit (x, y)
 uniform float u_noiseOffset;     // défilement du bruit, en unités de bruit, modulo 289
 uniform float u_phase;           // évolution des vagues sur place, modulo 289
 uniform float u_octaves;         // nombre d'octaves de turbulence (1 à 5)
@@ -116,8 +117,8 @@ void main() {
     float width = u_screenSize.x;
 
     vec3 p = vec3(
-        frag.x / width * u_noiseScale.x,
-        frag.y / width * u_noiseScale.y + u_noiseOffset,
+        frag.x / u_noiseUnit * u_noiseScale.x,
+        frag.y / u_noiseUnit * u_noiseScale.y + u_noiseOffset,
         u_phase);
     float n = turbulence(p);
     float h = 1.0 - n;

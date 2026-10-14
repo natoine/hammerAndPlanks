@@ -31,7 +31,7 @@ class SeaWavesTest {
 
     @Test fun `le bruit defile avec la texture`() {
         assertEquals(0f, waves.noiseOffset(0f, 1000f))
-        // Défiler d'une largeur d'écran avance le bruit de noiseScaleY unités.
+        // Défiler d'une unité (petit côté de l'écran) avance le bruit de noiseScaleY unités.
         assertEquals(waves.noiseScaleY, waves.noiseOffset(1000f, 1000f), 1e-4f)
         val far = waves.noiseOffset(1e7f, 1000f)
         assertTrue(far >= 0f && far < SeaWaves.NOISE_PERIOD)
