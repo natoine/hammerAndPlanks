@@ -8,6 +8,22 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.4.0] — 2026-10-14 — Manette barrée et imagette de la caméra
+
+### Added
+- Manette barrée : en mode manette sans manette branchée, le badge affiche une manette barrée et « Manette non détectée » (annonce web comprise). Présence vérifiée une fois par seconde (`PeriodicCheck`), donc mise à jour au branchement ou au débranchement.
+- Détection des manettes par plateforme derrière l'interface `GamepadDetector` : desktop via gdx-controllers 2.2.4 (SDL), Android via `InputDevice` (sources manette ou joystick, hors périphériques virtuels), web via l'API Gamepad.
+- Imagette du retour caméra en bas à droite, en mode caméra uniquement : cadre, effet miroir, recadrage sans déformation, format portrait ou paysage selon l'écran, états « démarrage », « accès refusé » et « aucune caméra ». La caméra s'éteint dès qu'on quitte le mode caméra ou que l'application passe en arrière-plan.
+- Caméra par plateforme derrière l'interface `CameraThumbnail` : desktop via webcam-capture 0.3.12 (image dessinée par le jeu), Android via CameraX 1.6.2 (PreviewView posée sur la vue du jeu, autorisation demandée au passage en mode caméra), web via getUserMedia (élément vidéo posé sur le canvas, créé seulement au démarrage de la caméra).
+- Pictos `input_gamepad_off.png` (dérivé du picto manette pour garder le même dessin) et `camera_off.png`, générés par `assets-src/ui/render_icons.py`.
+- Desktop : option `--input-mode` (`-Pmode=motion` avec Gradle) pour imposer le mode d'interaction au lancement.
+- Traductions fr et en de la manette absente et des états de la caméra.
+- Tests unitaires : mise en page et recadrage de l'imagette, vérification périodique, picto et libellé selon la présence d'une manette, option desktop, sources de manette Android ; tests du script de pictos (picto barré). Tests Playwright avec caméra et manette simulées : manette absente ou branchée, caméra éteinte hors mode caméra, imagette en bas à droite avec flux, flux coupé en sortant du mode, accès refusé, navigateur sans caméra.
+
+### Changed
+- Android : la vue du jeu est placée dans un FrameLayout pour superposer l'aperçu caméra ; manifeste avec l'autorisation caméra et les fonctionnalités caméra, tactile et manette déclarées facultatives.
+- README : marche à suivre pour tester la caméra et la manette sur chaque plateforme, architecture des interfaces de plateforme.
+
 ## [0.3.0] — 2026-10-14 — Mode d'interaction : badge et bascule par Tab
 
 ### Added
@@ -93,3 +109,5 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que joueur, je veux voir des vagues et de l'écume bouger sur la mer dès l'écran de lancement, sur téléphone, ordinateur et navigateur, afin de retrouver l'ambiance de l'ancien jeu.
 - `2026-10-14 | Picto du mode d'interaction en bas à gauche, bascule par Tab entre clavier (flèches), manette et caméra | input/**, settings.gradle.kts, game/build.gradle.kts, game/src/main/kotlin/.../HammerAndPlanksGame.kt, game/src/main/kotlin/.../PlatformHooks.kt, game/src/main/kotlin/.../ui/*, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../sea/*, assets/shaders/sea.frag, assets/i18n/*, assets/ui/*, assets-src/ui/*, platform/web/**, e2e/input-mode.spec.ts, game/src/test/kotlin/.../ui/*, README.md, CHANGELOG.md, package.json`
   - En tant que joueur, je veux voir en bas à gauche de l'écran quel mode d'interaction j'utilise (clavier, manette ou caméra) et en changer avec la touche Tab, ou en touchant le picto sur téléphone, afin de jouer avec le périphérique de mon choix.
+- `2026-10-14 | Manette barrée si aucune manette branchée ; imagette du retour caméra en bas à droite en mode caméra | game/src/main/kotlin/.../platform/*, game/src/main/kotlin/.../ui/*, game/src/main/kotlin/.../util/PeriodicCheck.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../HammerAndPlanksGame.kt, game/src/main/kotlin/.../PlatformHooks.kt, platform/desktop/**, platform/android/**, platform/web/**, assets/ui/*, assets/i18n/*, assets-src/ui/*, gradle/libs.versions.toml, playwright.config.ts, e2e/*, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux voir que ma manette n'est pas détectée et, en mode caméra, voir ce que filme la caméra, afin de savoir si mon périphérique est prêt avant de jouer.

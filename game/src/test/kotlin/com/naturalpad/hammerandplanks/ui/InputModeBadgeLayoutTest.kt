@@ -45,6 +45,35 @@ class InputModeBadgeLayoutTest {
         for (path in paths) assertTrue(File(assets, path).isFile, "Picto manquant : $path")
     }
 
+    @Test fun `manette barree et libelle dedie sans manette branchee`() {
+        assertEquals("ui/input_gamepad_off.png", InputModeBadgeLayout.iconPath(InputMode.GAMEPAD, gamepadConnected = false))
+        assertEquals("ui/input_gamepad.png", InputModeBadgeLayout.iconPath(InputMode.GAMEPAD, gamepadConnected = true))
+        assertEquals("input.mode.gamepad.missing", InputModeBadgeLayout.labelKey(InputMode.GAMEPAD, gamepadConnected = false))
+    }
+
+    @Test fun `l absence de manette ne change pas les autres modes`() {
+        for (mode in listOf(InputMode.KEYBOARD, InputMode.MOTION)) {
+            assertEquals(InputModeBadgeLayout.iconPath(mode, true), InputModeBadgeLayout.iconPath(mode, false))
+            assertEquals(InputModeBadgeLayout.labelKey(mode, true), InputModeBadgeLayout.labelKey(mode, false))
+        }
+    }
+
+    @Test fun `tous les pictos du badge existent`() {
+        val assets = File(System.getProperty("assetsDir") ?: "../assets")
+        assertEquals(InputMode.entries.size + 1, InputModeBadgeLayout.ALL_ICON_PATHS.size)
+        for (path in InputModeBadgeLayout.ALL_ICON_PATHS) assertTrue(File(assets, path).isFile, "Picto manquant : $path")
+    }
+
+    @Test fun `textes de la camera et de la manette absente traduits`() {
+        val base = FileHandle(File(System.getProperty("assetsDir") ?: "../assets", "i18n/messages"))
+        for (language in Languages.SUPPORTED) {
+            val texts = Texts.load(base, language)
+            for (key in listOf("input.mode.gamepad.missing", "camera.starting", "camera.denied", "camera.unavailable")) {
+                assertTrue(texts.get(key).isNotBlank(), "$language / $key")
+            }
+        }
+    }
+
     @Test fun `chaque mode a son nom traduit en francais et en anglais`() {
         val base = FileHandle(File(System.getProperty("assetsDir") ?: "../assets", "i18n/messages"))
         for (language in Languages.SUPPORTED) {

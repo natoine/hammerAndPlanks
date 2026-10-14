@@ -32,6 +32,28 @@ class RenderIconsTest(unittest.TestCase):
             for name in render_icons.ICONS:
                 self.assertEqual((32, 32), Image.open(os.path.join(out, f"{name}.png")).size)
 
+    def test_picto_barre_differe_de_l_original_et_garde_ses_coins_vides(self):
+        base = render_icons.render(render_icons.ICONS["input_gamepad"], 128)
+        barred = render_icons.crossed(base)
+        self.assertNotEqual(base.tobytes(), barred.tobytes())
+        self.assertEqual(base.size, barred.size)
+        # Le trait passe par le centre ; le coin opposé à la diagonale reste transparent.
+        self.assertEqual(255, barred.getchannel("A").getpixel((64, 64)))
+        self.assertEqual(0, barred.getchannel("A").getpixel((127, 0)))
+
+    def test_le_liseré_efface_le_dessin_le_long_du_trait(self):
+        base = render_icons.render(render_icons.ICONS["input_gamepad"], 128)
+        barred = render_icons.crossed(base)
+        alpha = barred.getchannel("A")
+        # Juste à côté du trait plein (décalé perpendiculairement), le liseré est transparent.
+        self.assertEqual(0, alpha.getpixel((72, 56)))
+
+    def test_ecrit_aussi_les_pictos_barres(self):
+        with tempfile.TemporaryDirectory() as out:
+            render_icons.main(["--size", "32", "--out", out])
+            for name in render_icons.CROSSED:
+                self.assertTrue(os.path.isfile(os.path.join(out, f"{name}.png")))
+
     def test_taille_trop_petite_refusee(self):
         with self.assertRaises(ValueError):
             render_icons.render(0xE312, 4)

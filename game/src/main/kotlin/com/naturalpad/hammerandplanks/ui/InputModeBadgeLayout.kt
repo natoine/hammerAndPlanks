@@ -51,11 +51,22 @@ data class InputModeBadgeLayout(
             )
         }
 
-        /** Picto du mode (PNG blanc 128 px, rendu par assets-src/ui/render_icons.py, teinté au dessin). */
-        fun iconPath(mode: InputMode): String = "ui/input_" + mode.name.lowercase() + ".png"
+        /**
+         * Picto du mode (PNG blanc 128 px, rendu par assets-src/ui/render_icons.py, teinté au dessin).
+         * Manette barrée quand le mode manette est choisi sans manette branchée.
+         */
+        fun iconPath(mode: InputMode, gamepadConnected: Boolean = true): String =
+            if (mode == InputMode.GAMEPAD && !gamepadConnected) "ui/input_gamepad_off.png"
+            else "ui/input_" + mode.name.lowercase() + ".png"
 
-        /** Clé de traduction du nom du mode. */
-        fun labelKey(mode: InputMode): String = "input.mode." + mode.name.lowercase()
+        /** Clé de traduction du nom du mode (« Manette non détectée » si aucune manette n'est branchée). */
+        fun labelKey(mode: InputMode, gamepadConnected: Boolean = true): String =
+            if (mode == InputMode.GAMEPAD && !gamepadConnected) "input.mode.gamepad.missing"
+            else "input.mode." + mode.name.lowercase()
+
+        /** Tous les pictos possibles du badge, à charger une fois. */
+        val ALL_ICON_PATHS: List<String> =
+            (InputMode.entries.map { iconPath(it) } + iconPath(InputMode.GAMEPAD, gamepadConnected = false)).distinct()
     }
 }
 

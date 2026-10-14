@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
+// Aucune manette n'est branchée en test : le mode manette s'annonce « Manette non détectée ».
 // Le lanceur web annonce le mode d'interaction dans une zone aria-live (#input-mode) : on la lit pour vérifier l'état.
 test.use({ locale: 'fr-FR' });
 
@@ -24,7 +25,7 @@ test('le clavier est le mode par défaut', async ({ page }) => {
 test('Tab fait défiler clavier, manette, caméra puis revient au clavier', async ({ page }) => {
   const status = await open(page);
   await page.keyboard.press('Tab');
-  await expect(status).toHaveText("Mode d'interaction : Manette");
+  await expect(status).toHaveText("Mode d'interaction : Manette non détectée");
   await page.keyboard.press('Tab');
   await expect(status).toHaveText("Mode d'interaction : Caméra");
   await page.keyboard.press('Tab');
@@ -45,7 +46,7 @@ test('un appui sur le badge change de mode, ailleurs non', async ({ page }) => {
   await expect(status).toHaveText("Mode d'interaction : Clavier (flèches)");
   const p = badgePoint(page);
   await page.mouse.click(p.x, p.y);
-  await expect(status).toHaveText("Mode d'interaction : Manette");
+  await expect(status).toHaveText("Mode d'interaction : Manette non détectée");
 });
 
 test('le mode choisi est conservé au rechargement', async ({ page }) => {

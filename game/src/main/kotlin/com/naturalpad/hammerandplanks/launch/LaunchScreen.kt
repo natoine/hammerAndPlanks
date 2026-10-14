@@ -19,8 +19,12 @@ import com.naturalpad.hammerandplanks.BuildInfo
 import com.naturalpad.hammerandplanks.HammerAndPlanksGame
 import com.naturalpad.hammerandplanks.PlatformHooks
 import com.naturalpad.hammerandplanks.sea.SeaRenderer
+import com.naturalpad.hammerandplanks.input.InputMode
+import com.naturalpad.hammerandplanks.ui.CameraPanel
+import com.naturalpad.hammerandplanks.ui.CameraThumbnailLayout
 import com.naturalpad.hammerandplanks.ui.InputModeBadge
 import com.naturalpad.hammerandplanks.ui.InputModeBadgeLayout
+import com.naturalpad.hammerandplanks.util.PeriodicCheck
 
 /**
  * Écran de lancement : la mer animée de l'ancien jeu (vagues et écume) défile, le bateau joueur (vue 3/4) tangue au centre,
@@ -36,19 +40,26 @@ class LaunchScreen(
     private val sea = SeaRenderer()
     private val badge = InputModeBadge(game.texts, touchHint = isTouchDevice())
     private val touchPoint = Vector2()
+    private val cameraPanel = CameraPanel(game.texts)
+    private val camera = platform.camera
+    /** Mode pour lequel la caméra a été allumée ou éteinte en dernier. */
+    private var cameraMode: InputMode? = null
+    private var paused = false
+    /** Une manette peut être branchée à tout moment : on vérifie une fois par seconde. */
+    private val gamepadCheck = PeriodicCheck(1f) { platform.gamepads.isConnected() }
 
     /** Tab fait défiler les modes d'interaction ; un appui sur le badge aussi (écrans tactiles). */
     private val input = object : InputAdapter() {
         override fun keyDown(keycode: Int): Boolean {
             if (keycode != Input.Keys.TAB) return false
-            badge.update(game.inputModes.next())
+            badge.update(game.inputModes.next(), game.gamepadConnected)
             return true
         }
 
         override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
             viewport.unproject(touchPoint.set(screenX.toFloat(), screenY.toFloat()))
             if (!badge.hitBox.contains(touchPoint.x, touchPoint.y)) return false
-            badge.update(game.inputModes.next())
+            badge.update(game.inputModes.next(), game.gamepadConnected)
             return true
         }
     }
@@ -77,7 +88,41 @@ class LaunchScreen(
 
     override fun hide() {
         if (Gdx.input.inputProcessor === input) Gdx.input.inputProcessor = null
+        stopCamera()
     }
+
+    override fun pause() {
+        paused = true
+        stopCamera() // libère la caméra quand l'application passe en arrière-plan
+    }
+
+    override fun resume() {
+        paused = false
+    }
+
+    /** Allume la caméra en mode caméra seulement, l'éteint sinon (caméra à la demande). */
+    private fun syncCamera() {
+        val mode = game.inputModes.current
+        if (mode == cameraMode || paused) return
+        cameraMode = mode
+        if (mode == InputMode.MOTION) {
+            placeCamera()
+            camera.start()
+        } else {
+            camera.stop()
+        }
+    }
+
+    private fun stopCamera() {
+        camera.stop()
+        cameraMode = null
+    }
+
+    private fun placeCamera() {
+        cameraLayout?.normalized()?.let { (left, top, width, height) -> camera.place(left, top, width, height) }
+    }
+
+    private var cameraLayout: CameraThumbnailLayout? = null
 
     override fun resize(width: Int, height: Int) {
         if (width <= 0 || height <= 0) return // fenêtre minimisée
@@ -85,7 +130,11 @@ class LaunchScreen(
         val previous = layout
         layout = LaunchLayout.compute(width, height)
         badge.resize(InputModeBadgeLayout.compute(width, height, layout.margin))
-        badge.update(game.inputModes.current)
+        badge.update(game.inputModes.current, game.gamepadConnected)
+        cameraLayout = CameraThumbnailLayout.compute(width, height, layout.margin, layout.versionFontPx * 1.8f).also {
+            cameraPanel.resize(it)
+        }
+        placeCamera()
         if (titleFont == null || previous.titleFontPx != layout.titleFontPx ||
             previous.taglineFontPx != layout.taglineFontPx || previous.versionFontPx != layout.versionFontPx
         ) {
@@ -117,6 +166,8 @@ class LaunchScreen(
 
     override fun render(delta: Float) {
         time += delta
+        if (gamepadCheck.update(delta)) game.gamepadConnected = gamepadCheck.value == true
+        syncCamera()
         ScreenUtils.clear(DEEP_SEA)
         viewport.apply()
         batch.projectionMatrix = viewport.camera.combined
@@ -124,7 +175,9 @@ class LaunchScreen(
         drawSea()
         drawBoat()
         drawTexts()
-        badge.draw(batch, game.inputModes.current, LaunchAnimation.fadeIn(time, delayS = 0.2f))
+        val uiAlpha = LaunchAnimation.fadeIn(time, delayS = 0.2f)
+        badge.draw(batch, game.inputModes.current, game.gamepadConnected, uiAlpha)
+        if (game.inputModes.current == InputMode.MOTION) cameraPanel.draw(batch, camera, uiAlpha)
         batch.end()
     }
 
@@ -168,6 +221,8 @@ class LaunchScreen(
     override fun dispose() {
         disposeFonts()
         badge.dispose()
+        cameraPanel.dispose()
+        camera.dispose()
         titleGenerator.dispose()
         textGenerator.dispose()
         sea.dispose()

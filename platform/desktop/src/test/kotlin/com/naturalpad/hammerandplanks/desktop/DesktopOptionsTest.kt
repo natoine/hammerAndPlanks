@@ -29,6 +29,15 @@ class DesktopOptionsTest {
         }
     }
 
+    @Test fun `mode d interaction impose`() {
+        assertEquals("MOTION", DesktopOptions.parse(arrayOf("--input-mode=motion")).inputMode)
+        assertEquals("GAMEPAD", DesktopOptions.parse(arrayOf("--input-mode=Gamepad")).inputMode)
+    }
+
+    @Test fun `mode d interaction inconnu refuse`() {
+        assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--input-mode=touch")) }
+    }
+
     @Test fun `option inconnue refusee`() {
         assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--plein-ecran")) }
     }

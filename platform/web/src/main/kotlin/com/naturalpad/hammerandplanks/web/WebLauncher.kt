@@ -18,6 +18,9 @@ object WebLauncher {
             }
 
             override fun onInputModeChanged(announcement: String) = announce(announcement)
+
+            override val gamepads = WebGamepads()
+            override val camera = WebCamera()
         }
         val config = TeaApplicationConfiguration("canvas").apply {
             width = 0 // 0 = toute la fenêtre, redimensionnée avec elle

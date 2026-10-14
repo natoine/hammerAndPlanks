@@ -19,6 +19,12 @@ ICONS = {
     "input_keyboard": 0xE312,  # keyboard
     "input_gamepad": 0xEA28,   # sports_esports
     "input_motion": 0xE04B,    # videocam
+    "camera_off": 0xE04C,      # videocam_off : caméra indisponible ou refusée
+}
+
+# Pictos barrés, dérivés d'un picto de ICONS pour garder exactement le même dessin.
+CROSSED = {
+    "input_gamepad_off": "input_gamepad",  # aucune manette détectée
 }
 
 
@@ -51,15 +57,33 @@ def render(codepoint: int, size: int, fill: float = 0.9) -> Image.Image:
     return image
 
 
+def crossed(image: Image.Image) -> Image.Image:
+    """Barre un picto en diagonale, à la manière des icônes « off » de Material : un trait plein
+    bordé d'un liseré transparent qui le détache du dessin."""
+    size = image.width
+    out = image.copy()
+    draw = ImageDraw.Draw(out)
+    start, end = (size * 0.12, size * 0.12), (size * 0.88, size * 0.88)
+    # Sur une image RGBA, ImageDraw remplace les pixels : le liseré efface vraiment le dessin.
+    draw.line([start, end], fill=(255, 255, 255, 0), width=max(2, round(size * 0.2)))
+    draw.line([start, end], fill=(255, 255, 255, 255), width=max(1, round(size * 0.08)))
+    return out
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--size", type=int, default=128)
     parser.add_argument("--out", default=os.path.join(HERE, "..", "..", "assets", "ui"))
     args = parser.parse_args(argv)
     os.makedirs(args.out, exist_ok=True)
+    rendered = {}
     for name, codepoint in ICONS.items():
+        rendered[name] = render(codepoint, args.size)
+    for name, source in CROSSED.items():
+        rendered[name] = crossed(rendered[source])
+    for name, image in rendered.items():
         path = os.path.join(args.out, f"{name}.png")
-        render(codepoint, args.size).save(path)
+        image.save(path)
         print(path)
     return 0
 

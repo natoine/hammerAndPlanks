@@ -19,3 +19,21 @@ external fun describePage(language: String, description: String)
 /** Annonce le mode d'interaction dans une zone aria-live (lue par les lecteurs d'écran). */
 @JSBody(params = ["text"], script = "var e = document.getElementById('input-mode'); if (e) { e.textContent = text; }")
 external fun announce(text: String)
+
+@JSBody(script = "return window.hapGamepads ? window.hapGamepads() : false;")
+external fun gamepadConnected(): Boolean
+
+@JSBody(script = "return window.hapCamera ? window.hapCamera.status() : 'UNAVAILABLE';")
+external fun cameraStatus(): String
+
+@JSBody(script = "if (window.hapCamera) { window.hapCamera.start(); }")
+external fun cameraStart()
+
+@JSBody(script = "if (window.hapCamera) { window.hapCamera.stop(); }")
+external fun cameraStop()
+
+@JSBody(
+    params = ["left", "top", "width", "height"],
+    script = "if (window.hapCamera) { window.hapCamera.place(left, top, width, height); }",
+)
+external fun cameraPlace(left: Float, top: Float, width: Float, height: Float)

@@ -1,5 +1,8 @@
 package com.naturalpad.hammerandplanks
 
+import com.naturalpad.hammerandplanks.platform.CameraThumbnail
+import com.naturalpad.hammerandplanks.platform.GamepadDetector
+
 /**
  * Ce que chaque lanceur (desktop, Android, iOS, web) fournit au jeu partagé.
  * Implémenté par injection, sans expect/actual (voir README, section 4).
@@ -13,4 +16,13 @@ interface PlatformHooks {
 
     /** Appelé à l'affichage et à chaque changement de mode d'interaction, avec une phrase traduite à annoncer. */
     fun onInputModeChanged(announcement: String) {}
+
+    /** Détection des manettes branchées. */
+    val gamepads: GamepadDetector get() = GamepadDetector.NONE
+
+    /** Retour caméra en imagette, utilisé en mode caméra. */
+    val camera: CameraThumbnail get() = CameraThumbnail.NONE
+
+    /** Mode d'interaction imposé au lancement (outil de développement), ou null pour reprendre le mode sauvegardé. */
+    val forcedInputMode: String? get() = null
 }

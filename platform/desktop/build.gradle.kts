@@ -20,6 +20,8 @@ dependencies {
     implementation(libs.gdx.backend.lwjgl3)
     implementation(variantOf(libs.gdx.platform) { classifier("natives-desktop") })
     implementation(variantOf(libs.gdx.freetype.platform) { classifier("natives-desktop") })
+    implementation(libs.gdx.controllers.desktop) // manettes (SDL via Jamepad)
+    implementation(libs.webcam.capture)          // webcam (V4L2, AVFoundation, DirectShow)
 }
 
 tasks.named<JavaExec>("run") {
@@ -30,6 +32,8 @@ tasks.named<JavaExec>("run") {
     project.findProperty("lang")?.let { args("--lang=$it") }
     project.findProperty("size")?.let { args("--size=$it") }
     project.findProperty("screenshot")?.let { args("--screenshot=$it") }
+    // et d'imposer le mode d'interaction : -Pmode=motion (keyboard, gamepad, motion)
+    project.findProperty("mode")?.let { args("--input-mode=$it") }
 }
 
 dependencies {

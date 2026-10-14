@@ -2,11 +2,9 @@ package com.naturalpad.hammerandplanks.ui
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
-import com.badlogic.gdx.graphics.g2d.NinePatch
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.utils.I18NBundle
@@ -15,16 +13,15 @@ import kotlin.math.max
 
 /** Dessine le badge du mode d'interaction et dit si un appui le touche. */
 class InputModeBadge(private val texts: I18NBundle, private val touchHint: Boolean) {
-    private val icons: Map<InputMode, Texture> = InputMode.entries.associateWith { mode ->
-        Texture(Gdx.files.internal(InputModeBadgeLayout.iconPath(mode)), true).apply {
+    private val icons: Map<String, Texture> = InputModeBadgeLayout.ALL_ICON_PATHS.associateWith { path ->
+        Texture(Gdx.files.internal(path), true).apply {
             setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
         }
     }
     private val textGenerator = FreeTypeFontGenerator(Gdx.files.internal("fonts/Nunito.ttf"))
     private var labelFont: BitmapFont? = null
     private var hintFont: BitmapFont? = null
-    private var background: NinePatch? = null
-    private var backgroundTexture: Texture? = null
+    private var background: RoundedBox? = null
     private var layout: InputModeBadgeLayout? = null
     private val glyphs = GlyphLayout()
     private val backgroundColor = Color()
@@ -53,36 +50,26 @@ class InputModeBadge(private val texts: I18NBundle, private val touchHint: Boole
             size = l.hintPx
             color = HINT_COLOR
         })
-        // Fond arrondi en neuf morceaux : un petit carré aux coins ronds, étiré au dessin.
-        val r = l.cornerRadius
-        val size = 2 * r + 2
-        val pixmap = Pixmap(size, size, Pixmap.Format.RGBA8888).apply {
-            setColor(Color.WHITE)
-            fillRectangle(r, 0, size - 2 * r, size)
-            fillRectangle(0, r, size, size - 2 * r)
-            fillCircle(r, r, r)
-            fillCircle(size - r - 1, r, r)
-            fillCircle(r, size - r - 1, r)
-            fillCircle(size - r - 1, size - r - 1, r)
-        }
-        backgroundTexture = Texture(pixmap).also { pixmap.dispose() }
-        background = NinePatch(backgroundTexture, r, r, r, r)
+        background = RoundedBox(l.cornerRadius)
     }
 
     /** Mesures du badge pour un mode : textes, taille, zone d'appui. */
     private class Measure(val label: String, val hint: String, val width: Float, val height: Float, val textHeight: Float)
 
-    private var measured: Pair<InputMode, Measure>? = null
+    /** Mode affiché et présence d'une manette (pour le picto barré). */
+    private data class State(val mode: InputMode, val gamepadConnected: Boolean)
+
+    private var measured: Pair<State, Measure>? = null
 
     /**
      * Calcule taille et zone d'appui pour [mode] sans dessiner. Appelé dès le redimensionnement,
      * pour qu'un appui arrivé avant la première image soit déjà reconnu.
      */
-    fun update(mode: InputMode) {
+    fun update(mode: InputMode, gamepadConnected: Boolean) {
         val l = layout ?: return
         val label = labelFont ?: return
         val hint = hintFont ?: return
-        val labelText = texts.get(InputModeBadgeLayout.labelKey(mode))
+        val labelText = texts.get(InputModeBadgeLayout.labelKey(mode, gamepadConnected))
         val hintText = texts.get(if (touchHint) "input.switch.touch" else "input.switch.key")
         glyphs.setText(label, labelText)
         val labelWidth = glyphs.width
@@ -92,14 +79,14 @@ class InputModeBadge(private val texts: I18NBundle, private val touchHint: Boole
         val height = l.height(max(l.iconPx.toFloat(), textHeight))
         val width = l.width(textWidth)
         hitBox = HitBox(l.x, l.y, width, height)
-        measured = mode to Measure(labelText, hintText, width, height, textHeight)
+        measured = State(mode, gamepadConnected) to Measure(labelText, hintText, width, height, textHeight)
     }
 
-    fun draw(batch: SpriteBatch, mode: InputMode, alpha: Float) {
+    fun draw(batch: SpriteBatch, mode: InputMode, gamepadConnected: Boolean, alpha: Float) {
         val l = layout ?: return
         val label = labelFont ?: return
         val hint = hintFont ?: return
-        if (measured?.first != mode) update(mode)
+        if (measured?.first != State(mode, gamepadConnected)) update(mode, gamepadConnected)
         val m = measured?.second ?: return
         val width = m.width
         val height = m.height
@@ -107,7 +94,7 @@ class InputModeBadge(private val texts: I18NBundle, private val touchHint: Boole
         val labelText = m.label
         val hintText = m.hint
 
-        background?.let {
+        background?.patch?.let {
             it.color = backgroundColor.set(BACKGROUND_COLOR).apply { a *= alpha }
             it.draw(batch, l.x, l.y, width, height)
         }
@@ -115,7 +102,7 @@ class InputModeBadge(private val texts: I18NBundle, private val touchHint: Boole
         val previous = batch.packedColor
         batch.setColor(1f, 1f, 1f, alpha)
         val iconSize = l.iconPx.toFloat()
-        batch.draw(icons.getValue(mode), l.x + l.padding, centerY - iconSize / 2f, iconSize, iconSize)
+        batch.draw(icons.getValue(InputModeBadgeLayout.iconPath(mode, gamepadConnected)), l.x + l.padding, centerY - iconSize / 2f, iconSize, iconSize)
         batch.packedColor = previous
         val textX = l.x + l.padding + l.iconPx + l.gap
         label.color.a = alpha
@@ -127,8 +114,7 @@ class InputModeBadge(private val texts: I18NBundle, private val touchHint: Boole
     private fun disposeGraphics() {
         labelFont?.dispose(); labelFont = null
         hintFont?.dispose(); hintFont = null
-        backgroundTexture?.dispose(); backgroundTexture = null
-        background = null
+        background?.dispose(); background = null
     }
 
     fun dispose() {

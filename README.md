@@ -47,6 +47,7 @@ npx playwright install chromium  # navigateur des tests d'interface, une seule f
 npm run desktop                  # fenêtre desktop 540x960, langue du système
 ./gradlew :platform:desktop:run -Plang=en -Psize=1920x1080   # forcer la langue et la taille
 ./gradlew :platform:desktop:run -Pscreenshot=/tmp/capture.png  # capture après 3 s puis fermeture
+./gradlew :platform:desktop:run -Pmode=motion                  # imposer le mode (keyboard, gamepad, motion)
 
 npm run android                  # installe l'APK de debug sur le téléphone branché (débogage USB activé)
 ./gradlew :platform:android:assembleDebug   # APK seul : platform/android/build/outputs/apk/debug/
@@ -60,12 +61,13 @@ npm run web:build && npm run test:e2e   # tests d'interface Playwright (Chromium
 
 Comment tester l'écran de lancement, plateforme par plateforme
 
-Résultat attendu partout : la mer défile lentement vers le bas avec des vagues et des lignes d'écume qui ondulent, le bateau (vue 3/4, proue vers le haut) tangue au centre, le titre « Hammer and Planks » puis l'accroche apparaissent en fondu en haut, la version s'affiche en bas à droite. En bas à gauche, un badge indique le mode d'interaction (clavier par défaut) : Tab passe à manette, caméra, puis de nouveau clavier ; un appui sur le badge fait de même. Le mode choisi est retrouvé au lancement suivant. L'accroche est en français sur un système ou un navigateur en français, en anglais sinon.
+Résultat attendu partout : la mer défile lentement vers le bas avec des vagues et des lignes d'écume qui ondulent, le bateau (vue 3/4, proue vers le haut) tangue au centre, le titre « Hammer and Planks » puis l'accroche apparaissent en fondu en haut, la version s'affiche en bas à droite. En bas à gauche, un badge indique le mode d'interaction (clavier par défaut) : Tab passe à manette, caméra, puis de nouveau clavier ; un appui sur le badge fait de même. Le mode choisi est retrouvé au lancement suivant. Sans manette branchée, le mode manette affiche une manette barrée et « Manette non détectée ». En mode caméra, une imagette du retour caméra (effet miroir) s'affiche en bas à droite ; si la caméra est refusée ou absente, l'imagette le dit. La caméra n'est allumée qu'en mode caméra et s'éteint dès qu'on en sort. L'accroche est en français sur un système ou un navigateur en français, en anglais sinon.
 
 Desktop (le plus rapide, pour le développement)
 1. `npm run desktop` : une fenêtre portrait 540x960 s'ouvre.
 2. Redimensionner la fenêtre (y compris en paysage) : le bateau et les textes se recalent sans se chevaucher.
 3. Tester l'autre langue : `./gradlew :platform:desktop:run -Plang=en` (ou `-Plang=fr`).
+3 bis. Tester la caméra : `./gradlew :platform:desktop:run -Pmode=motion` ; la webcam du PC s'affiche en bas à droite (Linux : l'utilisateur doit avoir accès à /dev/video0). Tester la manette : en mode manette, brancher puis débrancher une manette USB ; le picto barré disparaît puis revient en une seconde environ.
 4. Tester une taille précise : `-Psize=360x640` (petit téléphone), `-Psize=1920x1080` (écran PC).
 
 Android
@@ -75,16 +77,20 @@ Android
 4. Sans câble : `./gradlew :platform:android:assembleDebug`, puis copier `platform/android/build/outputs/apk/debug/android-debug.apk` sur le téléphone et l'ouvrir (autoriser l'installation d'applications inconnues).
 5. Sans téléphone : créer un émulateur dans Android Studio (Device Manager), le démarrer, puis `npm run android`.
 6. Tester l'autre langue : changer la langue du téléphone, puis relancer l'application.
+7. Tester la caméra : toucher le badge jusqu'au mode caméra ; Android demande l'autorisation, puis l'aperçu de la caméra frontale apparaît en bas à droite. Refuser l'autorisation affiche « Accès à la caméra refusé ».
+8. Tester la manette : connecter une manette Bluetooth ou USB ; en mode manette, le picto n'est plus barré.
 
 Navigateur (version web)
 1. `npm run web` compile le jeu en JavaScript puis le sert ; ouvrir http://localhost:8080 (arrêt du serveur : Ctrl+C).
 2. Format mobile : outils de développement du navigateur (F12) > mode appareil, choisir un téléphone, recharger la page.
 3. Tester l'autre langue : changer la langue préférée du navigateur (paramètres > langues), puis recharger.
 4. Le CHANGELOG est consultable sur http://localhost:8080/changelog/.
+5. Tester la caméra : Tab deux fois (mode caméra) ; le navigateur demande l'autorisation (localhost est accepté, sinon HTTPS est requis), puis la webcam s'affiche en bas à droite.
+6. Tester la manette : brancher une manette et appuyer sur l'un de ses boutons (les navigateurs ne signalent une manette qu'après un premier appui) ; en mode manette, le picto n'est plus barré.
 
 Tests automatisés
 1. `npm test` : tests unitaires (langue, traductions, mise en page sur plusieurs tailles d'écran, animations, sprites, options desktop).
-2. `npm run web:build && npm run test:e2e` : tests Playwright de la version web, en Chromium desktop et mobile, avec des navigateurs en français, en anglais et en allemand (repli sur l'anglais).
+2. `npm run web:build && npm run test:e2e` : tests Playwright de la version web, en Chromium desktop et mobile, avec des navigateurs en français, en anglais et en allemand (repli sur l'anglais). La caméra est simulée par Chromium (mire), les manettes par un faux navigator.getGamepads.
 3. `npm run version:check` : la version de package.json correspond à la dernière release du CHANGELOG.
 
 Structure actuelle :
@@ -93,10 +99,11 @@ Structure actuelle :
 input/                Kotlin pur : InputMode, InputModeSelector (bascule et sauvegarde du mode)
 game/                 cœur libGDX partagé : HammerAndPlanksGame, PlatformHooks, Languages, Texts,
                       launch/ (LaunchScreen, LaunchLayout, LaunchAnimation, BoatFrames),
-                      sea/ (SeaRenderer, SeaWaves), ui/ (InputModeBadge)
-platform/desktop/     lanceur LWJGL3 (options --lang, --size, --screenshot)
-platform/android/     lanceur Android (portrait, plein écran immersif)
-platform/web/         lanceur TeaVM, interop navigateur (langue, accessibilité), webapp/index.html
+                      sea/ (SeaRenderer, SeaWaves), ui/ (InputModeBadge, CameraPanel),
+                      platform/ (GamepadDetector, CameraThumbnail : interfaces implémentées par les lanceurs)
+platform/desktop/     lanceur LWJGL3 (options --lang, --size, --screenshot, --input-mode), manettes (gdx-controllers), webcam (webcam-capture)
+platform/android/     lanceur Android (portrait, plein écran immersif), manettes (InputDevice), caméra (CameraX)
+platform/web/         lanceur TeaVM, interop navigateur (langue, accessibilité, API Gamepad, getUserMedia), webapp/index.html
 assets/               sprites, mer, shaders, pictos ui/, polices OFL, i18n/messages*.properties (en par défaut, fr)
 e2e/                  tests Playwright de la version web
 package.json          version unique et scripts
@@ -179,7 +186,7 @@ interface InputSource { val inputs: Flow<GameInput>; val mode: InputMode }
 enum class InputMode { MOTION, TOUCH, KEYBOARD, GAMEPAD }
 Dénominateur commun : tout le gameplay doit être jouable avec un axe 2D et trois boutons (tir, tir spécial, interaction). Les actions non violentes passent par interact ; en capture de mouvement, un geste dédié (par exemple les mains ouvertes ou levées) doit pouvoir le déclencher. Un mode peut ajouter des bonus facultatifs (par exemple se pencher vers l'écran pour un tir spécial en mocap) via extras, mais aucun niveau ne doit les exiger.
 Sélection et bascule : le joueur choisit son mode au premier lancement et peut le changer depuis le menu, voire en cours de partie (hot-swap).
-Implémenté (0.3.0) : module :input avec InputMode { KEYBOARD, GAMEPAD, MOTION } et InputModeSelector. Le clavier (flèches gauche et droite) est le mode par défaut. Un badge en bas à gauche de l'écran affiche le picto et le nom du mode courant ; Tab fait défiler clavier, manette, caméra, et un appui sur le badge fait de même sur les écrans tactiles. Le choix est sauvegardé (Preferences libGDX, localStorage sur le web). Sur le web, chaque changement est annoncé aux lecteurs d'écran (zone aria-live). Le mode tactile (TOUCH) n'est pas encore dans la liste ; les modes manette et caméra ne sont pour l'instant qu'affichés, la lecture du joystick et de la caméra reste à brancher.
+Implémenté (0.3.0) : module :input avec InputMode { KEYBOARD, GAMEPAD, MOTION } et InputModeSelector. Le clavier (flèches gauche et droite) est le mode par défaut. Un badge en bas à gauche de l'écran affiche le picto et le nom du mode courant ; Tab fait défiler clavier, manette, caméra, et un appui sur le badge fait de même sur les écrans tactiles. Le choix est sauvegardé (Preferences libGDX, localStorage sur le web). Sur le web, chaque changement est annoncé aux lecteurs d'écran (zone aria-live). Le mode tactile (TOUCH) n'est pas encore dans la liste. Implémenté (0.4.0) : détection de manette par plateforme (desktop : gdx-controllers, Android : InputDevice, web : API Gamepad), picto barré sans manette ; imagette du retour caméra en mode caméra (desktop : webcam-capture, dessinée par le jeu ; Android : CameraX PreviewView posée sur la vue du jeu ; web : élément vidéo posé sur le canvas). Interfaces GamepadDetector et CameraThumbnail dans :game, implémentées par chaque lanceur. Reste à brancher : lecture du joystick et des images caméra pour piloter le bateau (chaîne :camera → :pose → :gestures).
 Caméra à la demande : la permission caméra, la calibration et le chargement du modèle de pose ne se déclenchent que si le mode capture de mouvement est choisi. Un joueur au tactile, au clavier ou à la manette n'a donc jamais à accorder l'accès à sa caméra.
 Tactile : mode par défaut sur un smartphone sans périphérique.
 Clavier et manette : sur Android, ce sont des périphériques Bluetooth ou USB. Les gérer via les événements d'entrée standard. Le clavier et la manette concernent surtout les tablettes, les appareils Android TV, les ChromeOS et les smartphones avec manette clipsable.
@@ -260,7 +267,7 @@ La mer reprend le shader de l'ancien jeu Unity (Assets/Shaders/PerlinNormalHeigh
 
 Pictos de l'interface
 
-Les pictos des modes d'interaction (assets/ui/input_*.png, blancs, 128 px, teintés au dessin) sont rendus depuis la police Material Icons (Google, Apache 2.0, source et licence dans assets-src/ui/). La police n'est pas embarquée : libGDX ne sait pas générer une police sans lettres.
+Les pictos des modes d'interaction (assets/ui/input_*.png, dont la manette barrée input_gamepad_off.png, et camera_off.png pour l'imagette, blancs, 128 px, teintés au dessin) sont rendus depuis la police Material Icons (Google, Apache 2.0, source et licence dans assets-src/ui/). La police n'est pas embarquée : libGDX ne sait pas générer une police sans lettres.
 
 ```bash
 python3 assets-src/ui/render_icons.py           # régénère assets/ui/input_*.png

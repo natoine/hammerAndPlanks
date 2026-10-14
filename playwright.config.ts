@@ -9,7 +9,16 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:8080',
     // WebGL logiciel pour les navigateurs sans GPU (CI, headless).
-    launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
+    // Caméra simulée par Chromium (mire animée) : pas de vraie webcam ni de fenêtre d'autorisation en test.
+    launchOptions: {
+      args: [
+        '--use-angle=swiftshader',
+        '--enable-unsafe-swiftshader',
+        '--use-fake-device-for-media-stream',
+        '--use-fake-ui-for-media-stream',
+      ],
+    },
+    permissions: ['camera'],
   },
   projects: [
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },

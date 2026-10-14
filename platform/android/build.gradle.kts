@@ -39,6 +39,14 @@ kotlin {
 dependencies {
     implementation(project(":game"))
     implementation(libs.gdx.backend.android)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.lifecycle.runtime) // LifecycleOwner Kotlin pour lier CameraX hors ComponentActivity
+    testImplementation(kotlin("test-junit5"))
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.launcher)
     for (abi in listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")) {
         natives(variantOf(libs.gdx.platform) { classifier("natives-$abi") })
         natives(variantOf(libs.gdx.freetype.platform) { classifier("natives-$abi") })
@@ -58,3 +66,5 @@ val copyAndroidNatives = tasks.register<Copy>("copyAndroidNatives") {
 }
 tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }
     .configureEach { dependsOn(copyAndroidNatives) }
+
+tasks.withType<Test>().configureEach { useJUnitPlatform() }

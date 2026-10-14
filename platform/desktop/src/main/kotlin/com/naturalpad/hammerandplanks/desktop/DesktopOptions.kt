@@ -6,10 +6,12 @@ data class DesktopOptions(
     val width: Int = DEFAULT_WIDTH,
     val height: Int = DEFAULT_HEIGHT,
     val screenshotPath: String? = null,
+    val inputMode: String? = null,
 ) {
     companion object {
         const val DEFAULT_WIDTH = 540
         const val DEFAULT_HEIGHT = 960
+        val INPUT_MODES = listOf("keyboard", "gamepad", "motion")
 
         fun parse(args: Array<String>): DesktopOptions {
             var options = DesktopOptions()
@@ -17,6 +19,10 @@ data class DesktopOptions(
                 val value = arg.substringAfter("=", "")
                 options = when {
                     arg.startsWith("--lang=") -> options.copy(language = value.ifBlank { null })
+                    arg.startsWith("--input-mode=") -> {
+                        require(value.lowercase() in INPUT_MODES) { "Mode inconnu : '$value' (attendu : ${INPUT_MODES.joinToString()})" }
+                        options.copy(inputMode = value.uppercase())
+                    }
                     arg.startsWith("--screenshot=") -> options.copy(screenshotPath = value.ifBlank { null })
                     arg.startsWith("--size=") -> {
                         val parts = value.lowercase().split("x")

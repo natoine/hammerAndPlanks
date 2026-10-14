@@ -6,6 +6,7 @@ import com.badlogic.gdx.utils.I18NBundle
 import com.naturalpad.hammerandplanks.input.InputMode
 import com.naturalpad.hammerandplanks.input.InputModeSelector
 import com.naturalpad.hammerandplanks.launch.LaunchScreen
+import com.naturalpad.hammerandplanks.ui.InputModeBadgeLayout
 
 /** Point d'entrée partagé par tous les lanceurs. */
 class HammerAndPlanksGame(private val platform: PlatformHooks) : Game() {
@@ -20,8 +21,10 @@ class HammerAndPlanksGame(private val platform: PlatformHooks) : Game() {
     override fun create() {
         language = Languages.resolve(platform.preferredLanguageTag)
         texts = Texts.load(Gdx.files.internal("i18n/messages"), language)
+        gamepadConnected = platform.gamepads.isConnected()
         val prefs = Gdx.app.getPreferences(PREFERENCES)
-        inputModes = InputModeSelector(InputModeSelector.parse(prefs.getString(KEY_INPUT_MODE, null))) { mode ->
+        val initial = platform.forcedInputMode ?: prefs.getString(KEY_INPUT_MODE, null)
+        inputModes = InputModeSelector(InputModeSelector.parse(initial)) { mode ->
             prefs.putString(KEY_INPUT_MODE, mode.name)
             prefs.flush()
             announceInputMode(mode)
@@ -29,9 +32,17 @@ class HammerAndPlanksGame(private val platform: PlatformHooks) : Game() {
         setScreen(LaunchScreen(this, platform))
     }
 
+    /** Dernière présence de manette connue (mise à jour par l'écran courant). */
+    var gamepadConnected: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            if (::inputModes.isInitialized && inputModes.current == InputMode.GAMEPAD) announceInputMode()
+        }
+
     /** Annonce le mode courant (lecteur d'écran sur le web, par exemple). */
     fun announceInputMode(mode: InputMode = inputModes.current) {
-        val name = texts.get("input.mode." + mode.name.lowercase())
+        val name = texts.get(InputModeBadgeLayout.labelKey(mode, gamepadConnected))
         platform.onInputModeChanged(texts.format("input.mode.announce", name))
     }
 
