@@ -1,5 +1,7 @@
 package com.naturalpad.hammerandplanks
 
+import com.naturalpad.hammerandplanks.input.MotionInput
+import com.naturalpad.hammerandplanks.input.MotionStatus
 import com.naturalpad.hammerandplanks.platform.CameraThumbnail
 import com.naturalpad.hammerandplanks.platform.GamepadDetector
 
@@ -22,6 +24,18 @@ interface PlatformHooks {
      * d'écran (négatif à gauche). Sert aux tests d'interface du web.
      */
     fun onBoatMoved(offset: Float) {}
+
+    /**
+     * Pilotage par le corps (mode caméra) : chaîne caméra → InstantHMR → gestes, assemblée par le lanceur.
+     * Le jeu n'en voit que le GameInput et l'état.
+     */
+    val motion: MotionInput get() = MotionInput.NONE
+
+    /** Partie suivie en mode caméra (« shoulders » ou « head »), pour la consigne affichée. */
+    val tiltSource: String get() = "shoulders"
+
+    /** Appelé quand l'état du pilotage par le corps change, avec la phrase traduite (accessibilité, tests web). */
+    fun onMotionStatusChanged(status: MotionStatus, text: String) {}
 
     /** Détection des manettes branchées. */
     val gamepads: GamepadDetector get() = GamepadDetector.NONE

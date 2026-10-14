@@ -22,11 +22,16 @@ dependencies {
     implementation(variantOf(libs.gdx.freetype.platform) { classifier("natives-desktop") })
     implementation(libs.gdx.controllers.desktop) // manettes (SDL via Jamepad)
     implementation(libs.webcam.capture)          // webcam (V4L2, AVFoundation, DirectShow)
+    implementation(project(":gestures"))         // pose -> gestes -> GameInput (mode caméra)
+    implementation(project(":pose-onnx"))
+    implementation(libs.onnxruntime)             // InstantHMR sur le processeur
 }
 
 tasks.named<JavaExec>("run") {
     // Les fichiers « internal » de libGDX sont lus depuis le dossier assets partagé.
     workingDir = rootProject.file("assets")
+    // Modèle de pose, non versionné (licence SAM) : ./gradlew downloadModel
+    args("--model=" + rootProject.file("models/instanthmr.onnx").absolutePath)
     // Permet de forcer la langue : ./gradlew :platform:desktop:run -Plang=en
     // et de prendre une capture : -Pscreenshot=/chemin/capture.png -Psize=1920x1080
     project.findProperty("lang")?.let { args("--lang=$it") }
@@ -37,6 +42,11 @@ tasks.named<JavaExec>("run") {
     // et le contrôle du bateau : -Pcontrol=velocity -Pspeed=0.5
     project.findProperty("control")?.let { args("--control=$it") }
     project.findProperty("speed")?.let { args("--speed=$it") }
+    // et l'inclinaison suivie en mode caméra : -Ptilt=head (shoulders par défaut)
+    project.findProperty("tilt")?.let { args("--tilt=$it") }
+    // et journaliser les mesures de pose chaque seconde : -PdebugPose
+    if (project.hasProperty("debugPose")) args("--debug-pose")
+    project.findProperty("screenshotDelay")?.let { args("--screenshot-delay=$it") }
 }
 
 dependencies {

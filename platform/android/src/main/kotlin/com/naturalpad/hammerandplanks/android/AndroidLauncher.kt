@@ -7,6 +7,9 @@ import com.badlogic.gdx.backends.android.AndroidApplication
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration
 import com.naturalpad.hammerandplanks.HammerAndPlanksGame
 import com.naturalpad.hammerandplanks.PlatformHooks
+import com.naturalpad.hammerandplanks.gestures.MotionSteering
+import com.naturalpad.hammerandplanks.gestures.PoseMotionInput
+import com.naturalpad.hammerandplanks.gestures.TiltSource
 import java.util.Locale
 
 /**
@@ -20,10 +23,13 @@ class AndroidLauncher : AndroidApplication() {
         super.onCreate(savedInstanceState)
         val root = FrameLayout(this)
         camera = AndroidCamera(this, root)
+        // Chaîne du mode caméra : CameraX → InstantHMR → inclinaison du buste → GameInput.
+        val motionInput = PoseMotionInput(AndroidPoseSource(this, camera), MotionSteering(source = TiltSource.SHOULDERS))
         val hooks = object : PlatformHooks {
             override val preferredLanguageTag: String = Locale.getDefault().toLanguageTag()
             override val gamepads = AndroidGamepads()
             override val camera = this@AndroidLauncher.camera
+            override val motion = motionInput
         }
         val config = AndroidApplicationConfiguration().apply {
             useImmersiveMode = true

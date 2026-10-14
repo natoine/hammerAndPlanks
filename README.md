@@ -34,14 +34,15 @@ Backend web	TeaVM plutôt que Kotlin/JS ou Kotlin/Wasm : le backend GWT de libGD
 
 3. Démarrer, lancer et tester
 
-État actuel : écran de lancement (mer animée, bateau, titre) sur desktop, Android et navigateur ; le bateau se pilote aux flèches du clavier ou au stick gauche de la manette. Seuls les modules :game et :platform:desktop, :platform:android, :platform:web existent ; les autres modules de la section 4 seront créés au fil des besoins. iOS (MobiVM) demande un Mac pour compiler et n'est pas encore branché.
+État actuel : écran de lancement (mer animée, bateau, titre) sur desktop, Android et navigateur ; le bateau se pilote aux flèches du clavier, au stick gauche de la manette ou, en mode caméra, en inclinant le buste ou la tête (InstantHMR). Modules existants : :input, :pose, :pose-onnx, :gestures, :game et les lanceurs :platform:desktop, :platform:android, :platform:web ; les autres modules de la section 4 seront créés au fil des besoins. iOS (MobiVM) demande un Mac pour compiler et n'est pas encore branché.
 
 Prérequis : JDK 17 ou plus (testé avec 21), Node 22 et npm, SDK Android (chemin dans local.properties, non versionné : `sdk.dir=/chemin/vers/Android/Sdk`). Gradle est fourni par le wrapper (./gradlew).
 
 La version du projet est dans package.json, seule source de vérité : Gradle la lit pour l'APK et l'écran de lancement. `npm run version:check` vérifie qu'elle correspond à la dernière release du CHANGELOG.
 
 ```bash
-npm install                      # outils web et tests d'interface (Playwright, http-server)
+npm install                      # ONNX Runtime Web, outils de test d'interface (Playwright)
+./gradlew downloadModel          # modèle de pose InstantHMR (77 Mo, non versionné, empreinte vérifiée)
 npx playwright install chromium  # navigateur des tests d'interface, une seule fois
 
 npm run desktop                  # fenêtre desktop 540x960, langue du système
@@ -53,9 +54,11 @@ npm run android                  # installe l'APK de debug sur le téléphone br
 ./gradlew :platform:android:assembleDebug   # APK seul : platform/android/build/outputs/apk/debug/
 
 npm run web                      # compile en JavaScript (TeaVM) puis sert sur http://localhost:8080
+                                 # (serveur avec en-têtes COOP/COEP : ONNX Runtime Web peut utiliser plusieurs threads)
                                  # le CHANGELOG est servi sur http://localhost:8080/changelog/
 
 npm test                         # tests unitaires (JUnit 5) de tous les modules
+npm run test:scripts             # tests des scripts Node (serveur web)
 npm run web:build && npm run test:e2e   # tests d'interface Playwright (Chromium desktop et mobile)
 ```
 
@@ -68,7 +71,7 @@ Desktop (le plus rapide, pour le développement)
 2. Flèches gauche et droite : le bateau se déplace et s'incline ; maintenues, il va jusqu'au bord ; relâchées, il revient au centre (mode position). Autres modes : `./gradlew :platform:desktop:run -Pcontrol=velocity` (ou `force`), facteur de vitesse `-Pspeed=0.5`.
 2 bis. Redimensionner la fenêtre (y compris en paysage) : le bateau et les textes se recalent sans se chevaucher.
 3. Tester l'autre langue : `./gradlew :platform:desktop:run -Plang=en` (ou `-Plang=fr`).
-3 bis. Tester la caméra : `./gradlew :platform:desktop:run -Pmode=motion` ; la webcam du PC s'affiche en bas à droite (Linux : l'utilisateur doit avoir accès à /dev/video0). Tester la manette : `./gradlew :platform:desktop:run -Pmode=gamepad`, brancher une manette USB ou Bluetooth ; le picto n'est plus barré et le stick gauche déplace le bateau ; la débrancher remet le picto barré en une seconde environ.
+3 bis. Tester la caméra : `./gradlew :platform:desktop:run -Pmode=motion` ; la webcam du PC s'affiche en bas à droite (Linux : l'utilisateur doit avoir accès à /dev/video0). Pilotage par le corps (modèle téléchargé par `./gradlew downloadModel`) : se placer en buste face à la webcam, rester droit pendant « Tenez-vous droit... » (mesure de la posture neutre), puis pencher le buste vers sa droite ou sa gauche ; le bateau suit. Suivre la tête plutôt que les épaules : `-Ptilt=head`. Journal des mesures chaque seconde (état, posture neutre, angle, axe) : `-PdebugPose`. Tester la manette : `./gradlew :platform:desktop:run -Pmode=gamepad`, brancher une manette USB ou Bluetooth ; le picto n'est plus barré et le stick gauche déplace le bateau ; la débrancher remet le picto barré en une seconde environ.
 4. Tester une taille précise : `-Psize=360x640` (petit téléphone), `-Psize=1920x1080` (écran PC).
 
 Android
@@ -78,7 +81,7 @@ Android
 4. Sans câble : `./gradlew :platform:android:assembleDebug`, puis copier `platform/android/build/outputs/apk/debug/android-debug.apk` sur le téléphone et l'ouvrir (autoriser l'installation d'applications inconnues).
 5. Sans téléphone : créer un émulateur dans Android Studio (Device Manager), le démarrer, puis `npm run android`.
 6. Tester l'autre langue : changer la langue du téléphone, puis relancer l'application.
-7. Tester la caméra : toucher le badge jusqu'au mode caméra ; Android demande l'autorisation, puis l'aperçu de la caméra frontale apparaît en bas à droite. Refuser l'autorisation affiche « Accès à la caméra refusé ».
+7. Tester la caméra : toucher le badge jusqu'au mode caméra ; Android demande l'autorisation, puis l'aperçu de la caméra frontale apparaît en bas à droite. Refuser l'autorisation affiche « Accès à la caméra refusé ». Pilotage par le corps : le modèle est embarqué dans l'APK s'il a été téléchargé avant la compilation (`./gradlew downloadModel`) ; se tenir droit pendant la calibration, puis pencher le buste. L'APK de debug pèse environ 235 Mo (modèle de 77 Mo et ONNX Runtime pour quatre architectures).
 8. Tester la manette : connecter une manette Bluetooth ou USB ; en mode manette, le picto n'est plus barré et le stick gauche déplace le bateau.
 9. Tester le déplacement au clavier : connecter un clavier Bluetooth ou USB, rester en mode clavier et utiliser les flèches gauche et droite.
 
@@ -88,7 +91,7 @@ Navigateur (version web)
 2 bis. Flèches gauche et droite : le bateau se déplace (cliquer d'abord dans la page si elle n'a pas le focus). Autres modes de contrôle par l'URL : http://localhost:8080/?control=velocity (ou force), et ?speed=0.5 pour le facteur de vitesse.
 3. Tester l'autre langue : changer la langue préférée du navigateur (paramètres > langues), puis recharger.
 4. Le CHANGELOG est consultable sur http://localhost:8080/changelog/.
-5. Tester la caméra : Tab deux fois (mode caméra) ; le navigateur demande l'autorisation (localhost est accepté, sinon HTTPS est requis), puis la webcam s'affiche en bas à droite.
+5. Tester la caméra : Tab deux fois (mode caméra) ; le navigateur demande l'autorisation (localhost est accepté, sinon HTTPS est requis), puis la webcam s'affiche en bas à droite. Pilotage par le corps : le navigateur télécharge le modèle (77 Mo) au premier passage en mode caméra ; se tenir droit pendant la calibration, puis pencher le buste. Suivre la tête : http://localhost:8080/?tilt=head. Aucune image ne quitte le navigateur.
 6. Tester la manette : brancher une manette et appuyer sur l'un de ses boutons (les navigateurs ne signalent une manette qu'après un premier appui) ; en mode manette, le picto n'est plus barré et le stick gauche déplace le bateau.
 
 Tests automatisés
@@ -99,7 +102,10 @@ Tests automatisés
 Structure actuelle :
 
 ```
-input/                Kotlin pur : GameInput, InputMode, InputModeSelector (bascule et sauvegarde du mode), KeyboardSteering, GamepadSteering
+input/                Kotlin pur : GameInput, InputMode, InputModeSelector, KeyboardSteering, GamepadSteering, MotionInput
+pose/                 Kotlin pur : Mhr70, PosePreprocessor, RoiTracker, PoseEstimator, ImageRotation, PoseSource
+pose-onnx/            InstantHMR avec ONNX Runtime Java (commun au desktop et à Android)
+gestures/             Kotlin pur : OneEuroFilter, BodyTilt, MotionSteering, PoseMotionInput
 game/                 cœur libGDX partagé : HammerAndPlanksGame, PlatformHooks, Languages, Texts,
                       launch/ (LaunchScreen, LaunchLayout, LaunchAnimation, BoatFrames, BoatMotion),
                       sea/ (SeaRenderer, SeaWaves), ui/ (InputModeBadge, CameraPanel),
@@ -107,7 +113,10 @@ game/                 cœur libGDX partagé : HammerAndPlanksGame, PlatformHooks
                       control/ (MovementControlMode, ControlSettings), util/ (SmoothDamp, PeriodicCheck)
 platform/desktop/     lanceur LWJGL3 (options --lang, --size, --screenshot, --input-mode, --control, --speed), manettes (gdx-controllers), webcam (webcam-capture)
 platform/android/     lanceur Android (portrait, plein écran immersif), manettes (InputDevice, gdx-controllers), caméra (CameraX)
-platform/web/         lanceur TeaVM, interop navigateur (langue, accessibilité, API Gamepad, getUserMedia), webapp/index.html
+platform/web/         lanceur TeaVM, interop navigateur (langue, accessibilité, API Gamepad, getUserMedia), webapp/index.html,
+                      webapp/pose.js (InstantHMR avec onnxruntime-web)
+models/               instanthmr.onnx (non versionné, ./gradlew downloadModel), checksums.txt
+scripts/              check-version.mjs, serve-web.mjs (serveur statique COOP/COEP)
 assets/               sprites, mer, shaders, pictos ui/, polices OFL, i18n/messages*.properties (en par défaut, fr)
 e2e/                  tests Playwright de la version web
 package.json          version unique et scripts
@@ -190,7 +199,7 @@ interface InputSource { val inputs: Flow<GameInput>; val mode: InputMode }
 enum class InputMode { MOTION, TOUCH, KEYBOARD, GAMEPAD }
 Dénominateur commun : tout le gameplay doit être jouable avec un axe 2D et trois boutons (tir, tir spécial, interaction). Les actions non violentes passent par interact ; en capture de mouvement, un geste dédié (par exemple les mains ouvertes ou levées) doit pouvoir le déclencher. Un mode peut ajouter des bonus facultatifs (par exemple se pencher vers l'écran pour un tir spécial en mocap) via extras, mais aucun niveau ne doit les exiger.
 Sélection et bascule : le joueur choisit son mode au premier lancement et peut le changer depuis le menu, voire en cours de partie (hot-swap).
-Implémenté (0.3.0) : module :input avec InputMode { KEYBOARD, GAMEPAD, MOTION } et InputModeSelector. Le clavier (flèches gauche et droite) est le mode par défaut. Un badge en bas à gauche de l'écran affiche le picto et le nom du mode courant ; Tab fait défiler clavier, manette, caméra, et un appui sur le badge fait de même sur les écrans tactiles. Le choix est sauvegardé (Preferences libGDX, localStorage sur le web). Sur le web, chaque changement est annoncé aux lecteurs d'écran (zone aria-live). Le mode tactile (TOUCH) n'est pas encore dans la liste. Implémenté (0.4.0) : détection de manette par plateforme (desktop : gdx-controllers, Android : InputDevice, web : API Gamepad), picto barré sans manette ; imagette du retour caméra en mode caméra (desktop : webcam-capture, dessinée par le jeu ; Android : CameraX PreviewView posée sur la vue du jeu ; web : élément vidéo posé sur le canvas). Interfaces GamepadDetector et CameraThumbnail dans :game, implémentées par chaque lanceur. Implémenté (0.6.0) : en mode clavier, KeyboardSteering (:input) produit un GameInput (axe horizontal [-1, 1]) ; BoatMotion (:game) déplace le bateau selon les trois modes de contrôle de l'ancien jeu (PlayerHorizontalMovement) : position (l'axe désigne un point du rail, portage exact, mode par défaut), vitesse et force. Lissage SmoothDamp de 0,6 s (portage de Mathf.SmoothDamp), vitesse maximale de l'ancien jeu (6 unités/s sur un rail de 32, soit 0,375 demi-rail/s), facteur de vitesse du joueur [0, 1]. Les modes vitesse et force reprennent l'intention et non la formule de l'ancien code, où le bateau ne bougeait presque pas et dépendait de la fréquence d'images. Ajout : inclinaison dans le virage. Réglages (ControlSettings) lus dans les préférences ou imposés au lancement, en attendant un menu d'options. Implémenté (0.7.0) : en mode manette, GamepadSteering (:input) transforme le stick gauche en GameInput, avec la zone morte de l'ancien jeu (0,15 par axe, remise à l'échelle, ProjectSettings/InputManager.asset) et le vecteur 2D borné à 1 (PlayerHorizontalMovement.getLateralAxisInput). Lecture du stick : desktop et Android via gdx-controllers, web via l'API Gamepad (mapping standard, axes 0 et 1). Les trois modes de contrôle s'appliquent aussi à la manette. Reste à brancher : la caméra vers le même GameInput (chaîne :camera → :pose → :gestures).
+Implémenté (0.3.0) : module :input avec InputMode { KEYBOARD, GAMEPAD, MOTION } et InputModeSelector. Le clavier (flèches gauche et droite) est le mode par défaut. Un badge en bas à gauche de l'écran affiche le picto et le nom du mode courant ; Tab fait défiler clavier, manette, caméra, et un appui sur le badge fait de même sur les écrans tactiles. Le choix est sauvegardé (Preferences libGDX, localStorage sur le web). Sur le web, chaque changement est annoncé aux lecteurs d'écran (zone aria-live). Le mode tactile (TOUCH) n'est pas encore dans la liste. Implémenté (0.4.0) : détection de manette par plateforme (desktop : gdx-controllers, Android : InputDevice, web : API Gamepad), picto barré sans manette ; imagette du retour caméra en mode caméra (desktop : webcam-capture, dessinée par le jeu ; Android : CameraX PreviewView posée sur la vue du jeu ; web : élément vidéo posé sur le canvas). Interfaces GamepadDetector et CameraThumbnail dans :game, implémentées par chaque lanceur. Implémenté (0.6.0) : en mode clavier, KeyboardSteering (:input) produit un GameInput (axe horizontal [-1, 1]) ; BoatMotion (:game) déplace le bateau selon les trois modes de contrôle de l'ancien jeu (PlayerHorizontalMovement) : position (l'axe désigne un point du rail, portage exact, mode par défaut), vitesse et force. Lissage SmoothDamp de 0,6 s (portage de Mathf.SmoothDamp), vitesse maximale de l'ancien jeu (6 unités/s sur un rail de 32, soit 0,375 demi-rail/s), facteur de vitesse du joueur [0, 1]. Les modes vitesse et force reprennent l'intention et non la formule de l'ancien code, où le bateau ne bougeait presque pas et dépendait de la fréquence d'images. Ajout : inclinaison dans le virage. Réglages (ControlSettings) lus dans les préférences ou imposés au lancement, en attendant un menu d'options. Implémenté (0.7.0) : en mode manette, GamepadSteering (:input) transforme le stick gauche en GameInput, avec la zone morte de l'ancien jeu (0,15 par axe, remise à l'échelle, ProjectSettings/InputManager.asset) et le vecteur 2D borné à 1 (PlayerHorizontalMovement.getLateralAxisInput). Lecture du stick : desktop et Android via gdx-controllers, web via l'API Gamepad (mapping standard, axes 0 et 1). Les trois modes de contrôle s'appliquent aussi à la manette. Implémenté (0.8.0) : en mode caméra, InstantHMR estime la pose et l'inclinaison latérale du buste (ligne des épaules, par défaut) ou de la tête (ligne des oreilles) pilote le bateau, avec les trois modes de contrôle. Chaîne assemblée par chaque lanceur (règle de dépendance respectée : :game ne voit qu'un MotionInput) : images caméra → :pose (prétraitement porté d'instanthmr/inference.py, suivi de la zone par les points du haut du corps, sans détecteur) → modèle (desktop et Android : ONNX Runtime Java via :pose-onnx ; web : onnxruntime-web en WebAssembly via webapp/pose.js) → :gestures (BodyTilt, calibration de la posture neutre sur 10 images, filtre One Euro, zone morte 3°, axe à fond à 20°) → GameInput. Pencher vers sa droite envoie le bateau à droite de l'écran (l'imagette est en miroir). Le badge affiche l'état : chargement, « Tenez-vous droit... », consigne, modèle absent ou erreur.
 Caméra à la demande : la permission caméra, la calibration et le chargement du modèle de pose ne se déclenchent que si le mode capture de mouvement est choisi. Un joueur au tactile, au clavier ou à la manette n'a donc jamais à accorder l'accès à sa caméra.
 Tactile : mode par défaut sur un smartphone sans périphérique.
 Clavier et manette : sur Android, ce sont des périphériques Bluetooth ou USB. Les gérer via les événements d'entrée standard. Le clavier et la manette concernent surtout les tablettes, les appareils Android TV, les ChromeOS et les smartphones avec manette clipsable.
@@ -217,6 +226,11 @@ Providers ONNX Runtime à tester dans l'ordre : QNN (Snapdragon), NNAPI (dépré
 NPU : formes statiques et quantification (fp16 ou int8) souvent requises ; les opérations non supportées retombent sur CPU/GPU. Benchmarker sur 3 ou 4 téléphones (Snapdragon, Tensor, Exynos, entrée de gamme).
 Cadrage : un joueur à 50 cm d'un téléphone est surtout visible en buste. Tester le modèle sur du cadrage haut du corps.
 Thermique et batterie : plafonner l'inférence à 15-20 Hz avec interpolation.
+Mesures (0.8.0, modèle publié fp16, une personne, image 640×480, prétraitement compris) :
+- PC de développement (Linux, processeur x86-64), ONNX Runtime Java 1.31 CPU, 4 threads : environ 50 ms par image ; plafonné à 20 Hz.
+- Chromium sans GPU (tests Playwright), onnxruntime-web 1.30 WebAssembly : environ 190 ms par image avec plusieurs threads (page isolée COOP/COEP), 450 ms sur un seul thread.
+- Téléphones : non mesurés (aucun appareil branché). Le modèle tourne sur le processeur ; QNN ou NNAPI restent à évaluer.
+
 Licence : le code est en Apache-2.0, mais les poids sont sous licence SAM (entraînés sur le dataset de Meta). Les licences de RF-DETR et des assets MHR s'appliquent aussi si utilisés. Valider la redistribution commerciale avant publication.
 Vie privée : tout tourne en local, aucune image n'est envoyée. À mettre en avant dans les stores et pour le RGPD.
 6. Interprétation des gestes (:gestures)

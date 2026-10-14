@@ -24,6 +24,7 @@ import com.naturalpad.hammerandplanks.input.GameInput
 import com.naturalpad.hammerandplanks.input.GamepadSteering
 import com.naturalpad.hammerandplanks.input.InputMode
 import com.naturalpad.hammerandplanks.input.KeyboardSteering
+import com.naturalpad.hammerandplanks.input.MotionStatus
 import com.naturalpad.hammerandplanks.ui.CameraPanel
 import com.naturalpad.hammerandplanks.ui.CameraThumbnailLayout
 import com.naturalpad.hammerandplanks.ui.InputModeBadge
@@ -46,6 +47,8 @@ class LaunchScreen(
     private val touchPoint = Vector2()
     private val cameraPanel = CameraPanel(game.texts)
     private val camera = platform.camera
+    private val motion = platform.motion
+    private var announcedMotionStatus: MotionStatus? = null
     /** Mode pour lequel la caméra a été allumée ou éteinte en dernier. */
     private var cameraMode: InputMode? = null
     private var paused = false
@@ -117,12 +120,15 @@ class LaunchScreen(
         if (mode == InputMode.MOTION) {
             placeCamera()
             camera.start()
+            motion.start()
         } else {
+            motion.stop()
             camera.stop()
         }
     }
 
     private fun stopCamera() {
+        motion.stop()
         camera.stop()
         cameraMode = null
     }
@@ -186,7 +192,7 @@ class LaunchScreen(
         drawBoat()
         drawTexts()
         val uiAlpha = LaunchAnimation.fadeIn(time, delayS = 0.2f)
-        badge.draw(batch, game.inputModes.current, game.gamepadConnected, uiAlpha)
+        badge.draw(batch, game.inputModes.current, game.gamepadConnected, uiAlpha, motionStatusKey())
         if (game.inputModes.current == InputMode.MOTION) cameraPanel.draw(batch, camera, uiAlpha)
         batch.end()
     }
@@ -195,14 +201,26 @@ class LaunchScreen(
         sea.draw(batch, layout.width.toFloat(), layout.height.toFloat(), time)
     }
 
-    /** Le mode d'interaction donne le GameInput qui pilote le bateau : flèches ou stick gauche. Caméra pas encore branchée. */
+    /** Le mode d'interaction donne le GameInput qui pilote le bateau : flèches, stick gauche ou inclinaison du corps. */
+    /** Ligne d'état du mode caméra, annoncée à la plateforme quand elle change. */
+    private fun motionStatusKey(): String? {
+        val mode = game.inputModes.current
+        val status = if (mode == InputMode.MOTION) motion.status else MotionStatus.OFF
+        val key = InputModeBadgeLayout.motionStatusKey(mode, status, platform.tiltSource)
+        if (status != announcedMotionStatus) {
+            announcedMotionStatus = status
+            platform.onMotionStatusChanged(status, key?.let(game.texts::get) ?: "")
+        }
+        return key
+    }
+
     private fun updateBoat(delta: Float) {
         val input = when (game.inputModes.current) {
             InputMode.KEYBOARD ->
                 KeyboardSteering.read(Gdx.input.isKeyPressed(Input.Keys.LEFT), Gdx.input.isKeyPressed(Input.Keys.RIGHT))
             InputMode.GAMEPAD ->
                 if (game.gamepadConnected) GamepadSteering.read(platform.gamepads.leftStick()) else GameInput.IDLE
-            InputMode.MOTION -> GameInput.IDLE // caméra : chaîne de pose pas encore branchée
+            InputMode.MOTION -> motion.read() // inclinaison du buste ou de la tête (InstantHMR)
         }
         boatMotion.update(input, delta)
         val offset = boatOffset()

@@ -53,62 +53,67 @@ class InputModeBadge(private val texts: I18NBundle, private val touchHint: Boole
         background = RoundedBox(l.cornerRadius)
     }
 
-    /** Mesures du badge pour un mode : textes, taille, zone d'appui. */
-    private class Measure(val label: String, val hint: String, val width: Float, val height: Float, val textHeight: Float)
+    /** Mesures du badge : textes, taille, zone d'appui. */
+    private class Measure(
+        val label: String, val lines: List<String>, val width: Float, val height: Float, val textHeight: Float,
+    )
 
-    /** Mode affiché et présence d'une manette (pour le picto barré). */
-    private data class State(val mode: InputMode, val gamepadConnected: Boolean)
+    /** Ce qui est affiché : mode, présence d'une manette (picto barré), ligne d'état du mode caméra. */
+    private data class State(val mode: InputMode, val gamepadConnected: Boolean, val statusKey: String?)
 
     private var measured: Pair<State, Measure>? = null
 
     /**
-     * Calcule taille et zone d'appui pour [mode] sans dessiner. Appelé dès le redimensionnement,
+     * Calcule taille et zone d'appui sans dessiner. Appelé dès le redimensionnement,
      * pour qu'un appui arrivé avant la première image soit déjà reconnu.
+     * [statusKey] : clé de la ligne d'état du mode caméra (voir [InputModeBadgeLayout.motionStatusKey]).
      */
-    fun update(mode: InputMode, gamepadConnected: Boolean) {
+    fun update(mode: InputMode, gamepadConnected: Boolean, statusKey: String? = null) {
         val l = layout ?: return
         val label = labelFont ?: return
         val hint = hintFont ?: return
         val labelText = texts.get(InputModeBadgeLayout.labelKey(mode, gamepadConnected))
-        val hintText = texts.get(if (touchHint) "input.switch.touch" else "input.switch.key")
+        val switchText = texts.get(if (touchHint) "input.switch.touch" else "input.switch.key")
+        val lines = listOfNotNull(statusKey?.let(texts::get), switchText)
         glyphs.setText(label, labelText)
-        val labelWidth = glyphs.width
-        glyphs.setText(hint, hintText)
-        val textWidth = max(labelWidth, glyphs.width)
-        val textHeight = label.capHeight + l.gap * 0.6f + hint.capHeight
+        var textWidth = glyphs.width
+        for (line in lines) { glyphs.setText(hint, line); textWidth = max(textWidth, glyphs.width) }
+        val lineGap = l.gap * 0.6f
+        val textHeight = label.capHeight + lines.size * (lineGap + hint.capHeight)
         val height = l.height(max(l.iconPx.toFloat(), textHeight))
         val width = l.width(textWidth)
         hitBox = HitBox(l.x, l.y, width, height)
-        measured = State(mode, gamepadConnected) to Measure(labelText, hintText, width, height, textHeight)
+        measured = State(mode, gamepadConnected, statusKey) to Measure(labelText, lines, width, height, textHeight)
     }
 
-    fun draw(batch: SpriteBatch, mode: InputMode, gamepadConnected: Boolean, alpha: Float) {
+    fun draw(batch: SpriteBatch, mode: InputMode, gamepadConnected: Boolean, alpha: Float, statusKey: String? = null) {
         val l = layout ?: return
         val label = labelFont ?: return
         val hint = hintFont ?: return
-        if (measured?.first != State(mode, gamepadConnected)) update(mode, gamepadConnected)
+        if (measured?.first != State(mode, gamepadConnected, statusKey)) update(mode, gamepadConnected, statusKey)
         val m = measured?.second ?: return
-        val width = m.width
-        val height = m.height
-        val textHeight = m.textHeight
-        val labelText = m.label
-        val hintText = m.hint
 
         background?.patch?.let {
             it.color = backgroundColor.set(BACKGROUND_COLOR).apply { a *= alpha }
-            it.draw(batch, l.x, l.y, width, height)
+            it.draw(batch, l.x, l.y, m.width, m.height)
         }
-        val centerY = l.y + height / 2f
+        val centerY = l.y + m.height / 2f
         val previous = batch.packedColor
         batch.setColor(1f, 1f, 1f, alpha)
         val iconSize = l.iconPx.toFloat()
         batch.draw(icons.getValue(InputModeBadgeLayout.iconPath(mode, gamepadConnected)), l.x + l.padding, centerY - iconSize / 2f, iconSize, iconSize)
         batch.packedColor = previous
         val textX = l.x + l.padding + l.iconPx + l.gap
+        var y = centerY + m.textHeight / 2f
         label.color.a = alpha
-        label.draw(batch, labelText, textX, centerY + textHeight / 2f)
+        label.draw(batch, m.label, textX, y)
+        y -= label.capHeight
         hint.color.a = HINT_COLOR.a * alpha
-        hint.draw(batch, hintText, textX, centerY - textHeight / 2f + hint.capHeight)
+        for (line in m.lines) {
+            y -= l.gap * 0.6f
+            hint.draw(batch, line, textX, y)
+            y -= hint.capHeight
+        }
     }
 
     private fun disposeGraphics() {

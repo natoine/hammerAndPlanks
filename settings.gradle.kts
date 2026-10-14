@@ -16,6 +16,9 @@ dependencyResolutionManagement {
 rootProject.name = "hammerAndPlanks"
 
 include(":input")
+include(":pose")
+include(":gestures")
+include(":pose-onnx")
 include(":game")
 include(":platform:desktop")
 include(":platform:android")

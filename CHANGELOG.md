@@ -8,6 +8,29 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.8.0] — 2026-10-14 — Pilotage par inclinaison du buste avec InstantHMR
+
+### Added
+- Mode caméra : en inclinant le buste (ligne des épaules, par défaut) ou la tête (ligne des oreilles), le joueur dirige le bateau, avec les trois modes de contrôle. Pencher vers sa droite envoie le bateau à droite de l'écran. Desktop (webcam), Android (caméra frontale) et web.
+- Module `:pose` (Kotlin pur) : ordre MHR70, prétraitement porté d'InstantHMR (carré 1,2×, 224×224 bilinéaire façon cv2, normalisation ImageNet, CLIFF en pixels normalisés, points 2D ramenés dans l'image), suivi de la zone de la personne par les points du haut du corps (sans détecteur), conversion RGBA vers RGB redressé, interfaces `PoseSource` et `PoseModel`.
+- Module `:pose-onnx` : InstantHMR avec ONNX Runtime Java 1.31 (CPU), partagé par le desktop et Android.
+- Module `:gestures` (Kotlin pur) : filtre One Euro, `BodyTilt` (inclinaison latérale sur les points 3D, mesure rejetée de profil ou de dos), `MotionSteering` (calibration de la posture neutre sur 10 images, zone morte de 3°, axe à fond à 20°, pose périmée après 0,5 s), `PoseMotionInput`.
+- `MotionInput` (module `:input`) : le jeu ne voit qu'un GameInput et un état ; la chaîne caméra → pose → gestes est assemblée par chaque lanceur, conformément aux règles de dépendance du README.
+- Badge : ligne d'état du mode caméra (chargement du modèle, « Tenez-vous droit... », consigne, modèle absent, erreur), traduite en français et en anglais ; annoncée sur le web (`#motion-status`, `data-motion-status`).
+- Desktop : estimation sur un thread dédié à partir des images de la webcam, 20 Hz au plus ; options `--model`, `--tilt=shoulders|head` (`-Ptilt`), `--debug-pose` (`-PdebugPose`, journal des mesures chaque seconde), `--screenshot-delay`.
+- Android : analyse d'images CameraX (RGBA, dernière image seulement) et inférence sur le fil d'analyse ; modèle embarqué dans les assets de l'APK s'il est téléchargé, non compressé.
+- Web : `webapp/pose.js` (onnxruntime-web 1.30, WebAssembly), chargé seulement au premier passage en mode caméra ; modèle et ONNX Runtime copiés dans la version web ; `?tilt=head`.
+- Tâche `./gradlew downloadModel` : téléchargement de `models/instanthmr.onnx` depuis HuggingFace, vérifié par son empreinte SHA-256 (`models/checksums.txt`) ; `models/README.md` (licences).
+- `scripts/serve-web.mjs` : serveur statique avec en-têtes COOP/COEP (plusieurs threads pour ONNX Runtime Web), protégé contre la sortie du dossier servi ; utilisé par `npm run web` et Playwright.
+- Tests : unitaires (prétraitement, rotation, suivi, estimateur avec faux modèle, filtre, inclinaison, pilotage, assemblage, options desktop), intégration avec le vrai modèle sur ONNX Runtime Java (ignorée sans modèle), tests Node du serveur, tests Playwright (pose synthétique : calibration, gauche, droite, retour au centre, zone morte, tête, sans effet hors mode caméra ; modèle absent ; vrai modèle chargé et exécuté dans Chromium).
+
+### Changed
+- `npm run web:serve` utilise le serveur COOP/COEP à la place de http-server (dépendance retirée).
+- README : mode caméra, téléchargement du modèle, mesures de performance, procédure de test par plateforme, structure du projet.
+
+### Fixed
+- Web : les appels JavaScript ne déclarent plus de variable locale. TeaVM renomme les paramètres en lettres simples à la minification, et une variable homonyme les masquait (cause du libellé de canvas erroné rencontré en 0.1.0).
+
 ## [0.7.0] — 2026-10-14 — Pilotage du bateau au stick de la manette
 
 ### Added
@@ -158,3 +181,5 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que joueur, je veux retrouver les modes de contrôle de l'ancien jeu (position, vitesse, force) et sa douceur de déplacement, afin de piloter le bateau comme avant, avec le réglage adapté à mes capacités.
 - `2026-10-14 | Pilotage du bateau au joystick de la manette, comme au clavier | input/src/main/kotlin/.../GamepadSteering.kt, game/src/main/kotlin/.../platform/GamepadDetector.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, platform/desktop/src/main/kotlin/.../DesktopGamepads.kt, platform/android/**, platform/web/**, gradle/libs.versions.toml, input/src/test/**, e2e/boat-gamepad.spec.ts, README.md, CHANGELOG.md, package.json`
   - En tant que joueur à la manette, je veux déplacer mon bateau avec le stick gauche, avec les mêmes modes de contrôle qu'au clavier, afin de jouer confortablement à la manette.
+- `2026-10-14 | Déplacer le bateau à droite et à gauche par inclinaison du buste (ligne des épaules ou inclinaison de la tête) avec InstantHMR | pose/**, pose-onnx/**, gestures/**, input/src/main/kotlin/.../MotionInput.kt, game/src/main/kotlin/.../PlatformHooks.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../ui/*, assets/i18n/*, platform/desktop/**, platform/android/**, platform/web/**, models/README.md, models/checksums.txt, build.gradle.kts, settings.gradle.kts, gradle/libs.versions.toml, scripts/serve-web.mjs, scripts/serve-web.test.mjs, playwright.config.ts, e2e/boat-motion.spec.ts, package.json, README.md, CHANGELOG.md`
+  - En tant que joueur, je veux diriger mon bateau en penchant le buste (ou la tête) devant la caméra, afin de jouer avec mon corps, sans manette ni clavier.

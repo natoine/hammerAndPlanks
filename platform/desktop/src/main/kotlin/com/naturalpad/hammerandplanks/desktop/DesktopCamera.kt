@@ -19,9 +19,15 @@ class DesktopCamera : CameraThumbnail {
     @Volatile override var status: CameraStatus = CameraStatus.OFF
         private set
 
-    private class Frame(val width: Int, val height: Int, val rgb: ByteArray)
+    /** Image RGB 24 bits, lignes de haut en bas ; [id] croît à chaque nouvelle image. */
+    class Frame(val width: Int, val height: Int, val rgb: ByteArray, val id: Long, val timestampS: Double)
 
     private val latest = AtomicReference<Frame?>(null)
+    private val latestForPose = AtomicReference<Frame?>(null)
+    private var nextId = 0L
+
+    /** Dernière image capturée, sans la consommer (lue par l'estimation de pose, sur son propre thread). */
+    fun peekFrame(): Frame? = latestForPose.get()
     @Volatile private var running = false
     private var worker: Thread? = null
     private var texture: Texture? = null
@@ -57,7 +63,9 @@ class DesktopCamera : CameraThumbnail {
                 val buffer: ByteBuffer = webcam.imageBytes ?: continue // RGB 24 bits
                 val size = webcam.viewSize
                 val bytes = ByteArray(buffer.remaining()).also { buffer.get(it) }
-                latest.set(Frame(size.width, size.height, bytes))
+                val frame = Frame(size.width, size.height, bytes, nextId++, System.nanoTime() / 1e9)
+                latest.set(frame)
+                latestForPose.set(frame)
                 status = CameraStatus.LIVE
             }
         } catch (e: Exception) {
@@ -73,6 +81,7 @@ class DesktopCamera : CameraThumbnail {
         worker?.join(STOP_TIMEOUT_MS)
         worker = null
         latest.set(null)
+        latestForPose.set(null)
         status = CameraStatus.OFF
     }
 

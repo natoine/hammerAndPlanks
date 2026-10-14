@@ -19,6 +19,7 @@
   <!-- Le libellé et la langue sont fixés par le jeu (WebLauncher), traduits selon le navigateur. -->
   <canvas id="canvas"></canvas>
   <p id="input-mode" class="visually-hidden" aria-live="polite"></p>
+  <p id="motion-status" class="visually-hidden" aria-live="polite"></p>
   <script>
     // Interop navigateur appelée par le lanceur TeaVM (BrowserApi.kt).
     window.hapGamepads = function () {
@@ -101,6 +102,7 @@
 
     window.addEventListener("load", function () { main(); });
   </script>
+  <script src="pose.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

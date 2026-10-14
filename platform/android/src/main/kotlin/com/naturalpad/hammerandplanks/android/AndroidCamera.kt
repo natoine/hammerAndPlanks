@@ -35,6 +35,10 @@ class AndroidCamera(private val activity: Activity, private val root: FrameLayou
     override val mirrored: Boolean get() = false
 
     private var wanted = false
+    private val analysisExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { Thread(it, "camera-analysis") }
+
+    /** Reçoit les images d'analyse (RGBA, non miroir) sur un fil dédié ; null si personne ne les lit. */
+    @Volatile var frameConsumer: ((androidx.camera.core.ImageProxy) -> Unit)? = null
     private var previewView: PreviewView? = null
     private var placement = floatArrayOf(0f, 0f, 0f, 0f)
 
@@ -74,8 +78,16 @@ class AndroidCamera(private val activity: Activity, private val root: FrameLayou
                 } else {
                     CameraSelector.DEFAULT_BACK_CAMERA
                 }
+                // Images pour l'estimation de pose : RGBA, seule la plus récente est gardée si l'inférence est lente.
+                val analysis = androidx.camera.core.ImageAnalysis.Builder()
+                    .setOutputImageFormat(androidx.camera.core.ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                    .setBackpressureStrategy(androidx.camera.core.ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                analysis.setAnalyzer(analysisExecutor) { image ->
+                    image.use { frameConsumer?.invoke(it) }
+                }
                 registry.currentState = Lifecycle.State.RESUMED
-                provider.bindToLifecycle(this, selector, preview)
+                provider.bindToLifecycle(this, selector, preview, analysis)
             } catch (e: Exception) {
                 Log.e(TAG, "Caméra indisponible", e)
                 status = CameraStatus.UNAVAILABLE

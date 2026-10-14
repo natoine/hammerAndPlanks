@@ -3,6 +3,8 @@ package com.naturalpad.hammerandplanks.web
 import org.teavm.jso.JSBody
 
 // Appels JavaScript du lanceur web. Fonctions de premier niveau : TeaVM les compile en fonctions statiques.
+// Pas de variable locale dans les scripts : TeaVM renomme les paramètres en lettres simples (c, e...)
+// à la minification, et une variable locale du même nom les masquerait.
 
 @JSBody(script = "return (navigator.languages && navigator.languages[0]) || navigator.language || null;")
 external fun browserLanguage(): String?
@@ -17,7 +19,7 @@ external fun browserLanguage(): String?
 external fun describePage(language: String, description: String)
 
 /** Annonce le mode d'interaction dans une zone aria-live (lue par les lecteurs d'écran). */
-@JSBody(params = ["text"], script = "var e = document.getElementById('input-mode'); if (e) { e.textContent = text; }")
+@JSBody(params = ["text"], script = "if (document.getElementById('input-mode')) { document.getElementById('input-mode').textContent = text; }")
 external fun announce(text: String)
 
 @JSBody(script = "return window.hapGamepads ? window.hapGamepads() : false;")
@@ -39,7 +41,7 @@ external fun cameraStop()
 external fun cameraPlace(left: Float, top: Float, width: Float, height: Float)
 
 /** Position du bateau exposée sur le canvas (data-boat-offset) pour les tests d'interface. */
-@JSBody(params = ["offset"], script = "var c = document.getElementById('canvas'); if (c) { c.dataset.boatOffset = offset.toFixed(3); }")
+@JSBody(params = ["offset"], script = "if (document.getElementById('canvas')) { document.getElementById('canvas').dataset.boatOffset = offset.toFixed(3); }")
 external fun reportBoatOffset(offset: Float)
 
 /** Paramètre de l'URL de la page (ex. ?control=velocity&speed=0.5), ou null. */
@@ -51,3 +53,39 @@ external fun gamepadStickX(): Float
 
 @JSBody(script = "return window.hapGamepadStick ? window.hapGamepadStick()[1] : 0;")
 external fun gamepadStickY(): Float
+
+// Estimation de pose du navigateur (webapp/pose.js, window.hapPose).
+@JSBody(script = "return window.hapPose ? window.hapPose.status() : 'NO_MODEL';")
+external fun poseStatus(): String
+
+@JSBody(script = "if (window.hapPose) { window.hapPose.start(); }")
+external fun poseStart()
+
+@JSBody(script = "if (window.hapPose) { window.hapPose.stop(); }")
+external fun poseStop()
+
+@JSBody(script = "return window.hapPose ? window.hapPose.time() : -1;")
+external fun poseTime(): Double
+
+@JSBody(script = "return window.hapPose ? window.hapPose.now() : performance.now() / 1000;")
+external fun poseNow(): Double
+
+@JSBody(params = ["i"], script = "return window.hapPose.joint3d(i);")
+external fun poseJoint3d(i: Int): Float
+
+@JSBody(params = ["i"], script = "return window.hapPose.joint2d(i);")
+external fun poseJoint2d(i: Int): Float
+
+@JSBody(script = "return window.hapPose ? window.hapPose.width() : 0;")
+external fun poseWidth(): Int
+
+@JSBody(script = "return window.hapPose ? window.hapPose.height() : 0;")
+external fun poseHeight(): Int
+
+/** État du pilotage par le corps exposé sur le canvas (data-motion-status) et annoncé (zone aria-live). */
+@JSBody(
+    params = ["status", "text"],
+    script = "if (document.getElementById('canvas')) { document.getElementById('canvas').dataset.motionStatus = status; }" +
+        "if (document.getElementById('motion-status')) { document.getElementById('motion-status').textContent = text; }",
+)
+external fun reportMotionStatus(status: String, text: String)

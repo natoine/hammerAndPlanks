@@ -12,6 +12,7 @@ kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 
 dependencies {
     implementation(project(":game"))
+    implementation(project(":gestures")) // pose -> gestes -> GameInput (mode caméra)
     implementation(libs.gdx.teavm.backend)
     implementation(libs.gdx.teavm.freetype)
 }
@@ -63,8 +64,22 @@ val publishChangelog = tasks.register("publishChangelog") {
     }
 }
 
-// Remplace la page d'accueil générée par gdx-teavm : viewport mobile, couleur de fond, pas de défilement tactile.
+// Remplace la page d'accueil générée par gdx-teavm (viewport mobile, fond, interop navigateur) et ajoute
+// l'estimation de pose : pose.js, ONNX Runtime Web (WebAssembly) et, s'il est téléchargé, le modèle.
 tasks.register<Copy>("customizeWebIndex") {
-    from(layout.projectDirectory.file("webapp/index.html"))
     into(distDir.map { it.dir("webapp") })
+    from(layout.projectDirectory.dir("webapp"))
+    from(rootProject.file("node_modules/onnxruntime-web/dist")) {
+        include("ort.wasm.min.js", "ort-wasm-simd-threaded.wasm", "ort-wasm-simd-threaded.mjs")
+        into("ort")
+    }
+    from(rootProject.file("models")) {
+        include("instanthmr.onnx")
+        into("models")
+    }
+    doFirst {
+        check(rootProject.file("node_modules/onnxruntime-web/dist/ort.wasm.min.js").isFile) {
+            "onnxruntime-web absent : lancer npm install"
+        }
+    }
 }

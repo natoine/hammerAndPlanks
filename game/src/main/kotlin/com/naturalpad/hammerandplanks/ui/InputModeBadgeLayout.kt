@@ -1,6 +1,7 @@
 package com.naturalpad.hammerandplanks.ui
 
 import com.naturalpad.hammerandplanks.input.InputMode
+import com.naturalpad.hammerandplanks.input.MotionStatus
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -63,6 +64,22 @@ data class InputModeBadgeLayout(
         fun labelKey(mode: InputMode, gamepadConnected: Boolean = true): String =
             if (mode == InputMode.GAMEPAD && !gamepadConnected) "input.mode.gamepad.missing"
             else "input.mode." + mode.name.lowercase()
+
+        /**
+         * Clé de la ligne d'état du mode caméra, ou null hors mode caméra ou à l'arrêt.
+         * [tiltSource] : « shoulders » ou « head », pour la consigne quand le corps pilote.
+         */
+        fun motionStatusKey(mode: InputMode, status: MotionStatus, tiltSource: String): String? {
+            if (mode != InputMode.MOTION) return null
+            return when (status) {
+                MotionStatus.OFF -> null
+                MotionStatus.LOADING -> "motion.loading"
+                MotionStatus.CALIBRATING -> "motion.calibrating"
+                MotionStatus.RUNNING -> if (tiltSource == "head") "motion.running.head" else "motion.running.shoulders"
+                MotionStatus.NO_MODEL -> "motion.noModel"
+                MotionStatus.ERROR -> "motion.error"
+            }
+        }
 
         /** Tous les pictos possibles du badge, à charger une fois. */
         val ALL_ICON_PATHS: List<String> =

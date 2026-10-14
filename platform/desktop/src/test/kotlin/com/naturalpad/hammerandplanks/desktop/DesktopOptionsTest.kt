@@ -50,6 +50,13 @@ class DesktopOptionsTest {
         assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--speed=vite")) }
     }
 
+    @Test fun `modele et inclinaison du mode camera`() {
+        val o = DesktopOptions.parse(arrayOf("--model=/tmp/m.onnx", "--tilt=Head"))
+        assertEquals("/tmp/m.onnx", o.modelPath)
+        assertEquals("HEAD", o.tiltSource)
+        assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--tilt=hanches")) }
+    }
+
     @Test fun `option inconnue refusee`() {
         assertFailsWith<IllegalArgumentException> { DesktopOptions.parse(arrayOf("--plein-ecran")) }
     }

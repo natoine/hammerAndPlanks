@@ -25,7 +25,8 @@ export default defineConfig({
     { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    command: 'npx http-server platform/web/build/dist/webapp -p 8080 -a 127.0.0.1 -c-1 --silent',
+    // Serveur avec en-têtes COOP/COEP : ONNX Runtime Web peut utiliser plusieurs threads.
+    command: 'node scripts/serve-web.mjs platform/web/build/dist/webapp 8080',
     url: 'http://127.0.0.1:8080',
     reuseExistingServer: true,
   },

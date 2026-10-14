@@ -9,12 +9,18 @@ data class DesktopOptions(
     val inputMode: String? = null,
     val controlMode: String? = null,
     val speedFactor: String? = null,
+    val modelPath: String? = null,
+    val tiltSource: String? = null,
+    val debugPose: Boolean = false,
+    val screenshotDelayS: Float = 3f,
 ) {
     companion object {
         const val DEFAULT_WIDTH = 540
         const val DEFAULT_HEIGHT = 960
         val INPUT_MODES = listOf("keyboard", "gamepad", "motion")
         val CONTROL_MODES = listOf("position", "velocity", "force")
+        /** shoulders : ligne des épaules ; head : ligne des oreilles. */
+        val TILT_SOURCES = listOf("shoulders", "head")
 
         fun parse(args: Array<String>): DesktopOptions {
             var options = DesktopOptions()
@@ -34,6 +40,17 @@ data class DesktopOptions(
                         val speed = value.toFloatOrNull()
                         require(speed != null && speed in 0f..1f) { "Facteur de vitesse invalide : '$value' (attendu entre 0 et 1)" }
                         options.copy(speedFactor = value)
+                    }
+                    arg == "--debug-pose" -> options.copy(debugPose = true)
+                    arg.startsWith("--screenshot-delay=") -> {
+                        val delay = value.toFloatOrNull()
+                        require(delay != null && delay > 0f) { "Délai de capture invalide : '$value'" }
+                        options.copy(screenshotDelayS = delay)
+                    }
+                    arg.startsWith("--model=") -> options.copy(modelPath = value.ifBlank { null })
+                    arg.startsWith("--tilt=") -> {
+                        require(value.lowercase() in TILT_SOURCES) { "Inclinaison inconnue : '$value' (attendu : ${TILT_SOURCES.joinToString()})" }
+                        options.copy(tiltSource = value.uppercase())
                     }
                     arg.startsWith("--screenshot=") -> options.copy(screenshotPath = value.ifBlank { null })
                     arg.startsWith("--size=") -> {
