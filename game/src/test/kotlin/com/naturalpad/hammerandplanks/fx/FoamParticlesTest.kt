@@ -117,6 +117,14 @@ class FoamParticlesTest {
         assertTrue(after.zip(before).all { (a, b) -> a > b - 1e-3f })
     }
 
+    @Test fun `plaques retournees au hasard dans les deux sens`() {
+        val f = foam(capacity = 200)
+        f.emit(1f, 200f, 0f, 0f, 0f, 0f, life = 10f, size = 5f)
+        var fx = 0; var fy = 0
+        f.forEachAlive { if (it.flipX) fx++; if (it.flipY) fy++ }
+        assertTrue(fx in 60..140 && fy in 60..140, "Retournements : $fx, $fy sur 200")
+    }
+
     @Test fun `debit nul aucune particule`() {
         val f = foam()
         f.emit(5f, 0f, 0f, 0f, 0f, 0f, life = 1f, size = 1f)

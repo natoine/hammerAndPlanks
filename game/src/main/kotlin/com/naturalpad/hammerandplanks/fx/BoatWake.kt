@@ -23,8 +23,8 @@ import kotlin.random.Random
  * La « vitesse » est celle de l'ancien moteur, en unités par seconde (bateau de 2,5 de long), défilement compris.
  */
 class BoatWake(random: Random = Random.Default) {
-    private val wake = FoamParticles(capacity = 384, random = random, style = WAKE_STYLE)
-    private val splash = FoamParticles(capacity = 640, random = random, style = SPLASH_STYLE)
+    private val wake = FoamParticles(capacity = 512, random = random, style = WAKE_STYLE)
+    private val splash = FoamParticles(capacity = 1024, random = random, style = SPLASH_STYLE)
     private var texture: Texture? = null
     private var region: TextureRegion? = null
     private var sinceBurst = 0f
@@ -32,10 +32,10 @@ class BoatWake(random: Random = Random.Default) {
     /** Charge la texture (thread de rendu). Séparé du constructeur pour garder la logique testable sans GL. */
     fun load() {
         if (texture != null) return
-        // Sans mipmaps : réduits, les petits traits d'écume restent un grain pétillant (comme l'ancien jeu)
-        // au lieu de se fondre en brouillard.
-        texture = Texture(Gdx.files.internal(TEXTURE_PATH), false).apply {
-            setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+        // Planche en haute résolution avec mipmaps, comme l'ancien jeu (texture 4064 px) : les petits traits
+        // deviennent une brume granuleuse, sans crénelage ni trame.
+        texture = Texture(Gdx.files.internal(TEXTURE_PATH), true).apply {
+            setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
         }.also { region = TextureRegion(it, 0, PLATE_TOP, it.width, PLATE_HEIGHT) } // la planche, sans la marge
     }
 
@@ -52,8 +52,10 @@ class BoatWake(random: Random = Random.Default) {
     fun update(
         dt: Float, boatX: Float, boatY: Float, boatSize: Float, headingDeg: Float, lateralSpeedPx: Float, seaSpeedPx: Float,
     ) {
-        val speed = oldGameSpeed(lateralSpeedPx, seaSpeedPx, boatSize)
         val unit = BOAT_LENGTH * boatSize / OLD_BOAT_LENGTH // pixels par unité de l'ancien jeu
+        // Débits : vitesse latérale du bateau composée avec la vitesse de jeu de référence de l'ancien jeu,
+        // indépendamment du défilement réel de la mer (ralenti au ressenti) : le sillage reste un ruban continu.
+        val speed = oldGameSpeed(lateralSpeedPx, EMISSION_REFERENCE_SPEED * unit, boatSize)
 
         // Sillage : sous le milieu du bateau, sur toute sa largeur, en repère « monde » (reste sur l'eau).
         val (cx, cy) = hullPoint(headingDeg, boatSize, along = TRAIL_ALONG)
@@ -106,7 +108,10 @@ class BoatWake(random: Random = Random.Default) {
         val w = system.sizeOf(p)
         val h = w * BILLBOARD_SQUASH
         batch.setColor(TINT_R, TINT_G, TINT_B, system.alphaOf(p) * alpha)
-        batch.draw(r, ox + p.x - w / 2f, oy + p.y - h / 2f, w / 2f, h / 2f, w, h, 1f, 1f, system.rotationOf(p))
+        batch.draw(
+            r.texture, ox + p.x - w / 2f, oy + p.y - h / 2f, w / 2f, h / 2f, w, h, 1f, 1f, system.rotationOf(p),
+            r.regionX, r.regionY, r.regionWidth, r.regionHeight, p.flipX, p.flipY,
+        )
     }
 
     fun clear() {
@@ -137,9 +142,9 @@ class BoatWake(random: Random = Random.Default) {
          * une caméra plongeant de 58° sous l'horizontale (rotation x de la caméra de jeu : cos 57,8°).
          */
         const val BILLBOARD_SQUASH = 0.53f
-        /** Planche d'écume dans assets/fx/foam.png (512×256) : lignes 21 à 235. */
-        const val PLATE_TOP = 21
-        const val PLATE_HEIGHT = 214
+        /** Planche d'écume dans assets/fx/foam.png (2048×1024, réduite de l'originale 4064×1696) : lignes 84 à 938. */
+        const val PLATE_TOP = 84
+        const val PLATE_HEIGHT = 855
 
         /** Longueur du bateau dans l'ancien jeu (unités Unity) et dans le sprite (fraction de son côté). */
         const val OLD_BOAT_LENGTH = 2.5f
@@ -161,7 +166,9 @@ class BoatWake(random: Random = Random.Default) {
         const val TRAIL_RADIUS = 0.45f
         const val TRAIL_ALONG = 0.176f / OLD_BOAT_LENGTH * BOAT_LENGTH
         /** Opacité calée sur la capture de l'ancien jeu (le sillage y éclaircit la mer sans la saturer). */
-        const val WAKE_OPACITY = 0.12f
+        const val WAKE_OPACITY = 0.25f
+        /** Vitesse de jeu de référence pour les débits : vitesse minimale de l'ancien jeu (MinFixedScrollSpeed). */
+        const val EMISSION_REFERENCE_SPEED = 2f
         // Ancien TrailAnim : débits selon la vitesse.
         const val TRAIL_RATE_FACTOR = 100f
         const val TRAIL_MIN_RATE = 10f
@@ -177,7 +184,7 @@ class BoatWake(random: Random = Random.Default) {
         const val SPLASH_RADIUS = 0.5f
         const val SPLASH_ALONG = 0.712f / OLD_BOAT_LENGTH * BOAT_LENGTH
         const val SPLASH_START_ROTATION_DEG = 20f
-        const val SPLASH_OPACITY = 0.12f
+        const val SPLASH_OPACITY = 0.25f
 
         /** Distances de la poupe à la proue, sur l'eau, en fraction du côté du sprite (rendu de profil). */
         const val BOW_RADIUS = 0.30f

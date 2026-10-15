@@ -15,25 +15,21 @@ class BoatWakeTest {
         assertEquals(5f, w.oldGameSpeed(360f, 480f, size), 1e-4f)    // 3-4-5 : vitesse latérale et défilement
     }
 
-    @Test fun `bateau immobile sur mer calme, debits minimaux de l ancien jeu`() {
+    @Test fun `debits a la vitesse de jeu de reference, meme si la mer defile lentement`() {
         val w = BoatWake(Random(1))
-        repeat(60) { w.update(1f / 60f, 0f, 0f, size, 0f, 0f, 0f) } // 1 s, vitesse nulle
-        // Sillage : 10/s vivant 1,5 s → environ 10 ; gerbes : 20/s vivant 0,5 s → environ 10.
-        assertTrue(w.wakeCount in 8..12, "Sillage ${w.wakeCount}")
-        assertTrue(w.splashCount in 7..13, "Gerbes ${w.splashCount}")
-        // Puis la rafale de 50 qui part une fois par seconde.
-        repeat(3) { w.update(1f / 60f, 0f, 0f, size, 0f, 0f, 0f) }
-        assertTrue(w.splashCount >= 55, "Gerbes après la rafale ${w.splashCount}")
+        repeat(60) { w.update(1f / 60f, 0f, 0f, size, 0f, 0f, seaSpeedPx = 10f) } // 1 s, bateau immobile, mer lente
+        // Vitesse 2 : sillage 200/s vivant 1,5 s (environ 200 après 1 s), gerbes 800/s vivant 0,5 s + rafales.
+        assertTrue(w.wakeCount in 180..220, "Sillage ${w.wakeCount}")
+        assertTrue(w.splashCount > 380, "Gerbes ${w.splashCount}")
     }
 
-    @Test fun `la vitesse multiplie l ecume comme dans TrailAnim`() {
-        val calm = BoatWake(Random(1)); val fast = BoatWake(Random(1))
+    @Test fun `aller vite multiplie encore l ecume comme dans TrailAnim`() {
+        val still = BoatWake(Random(1)); val fast = BoatWake(Random(1))
         repeat(60) {
-            calm.update(1f / 60f, 0f, 0f, size, 0f, 0f, 0f)
-            fast.update(1f / 60f, 0f, 0f, size, 0f, 0f, seaSpeedPx = 120f) // vitesse 1 : 100/s, 400/s, 6 rafales/s
+            still.update(1f / 60f, 0f, 0f, size, 0f, 0f, 10f)
+            fast.update(1f / 60f, 0f, 0f, size, 0f, lateralSpeedPx = 360f, seaSpeedPx = 10f) // 3 unités/s de côté
         }
-        assertTrue(fast.wakeCount > calm.wakeCount * 5, "Sillage ${calm.wakeCount} -> ${fast.wakeCount}")
-        assertTrue(fast.splashCount > calm.splashCount * 3, "Gerbes ${calm.splashCount} -> ${fast.splashCount}")
+        assertTrue(fast.wakeCount > still.wakeCount * 1.4f, "Sillage ${still.wakeCount} -> ${fast.wakeCount}")
     }
 
     @Test fun `rafale de 50 gerbes des la premiere seconde`() {

@@ -8,6 +8,19 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.12.2] — 2026-10-15 — Écume plus proche de la capture de l'ancien jeu
+
+### Changed
+- Texture d'écume en 2048 px de large (au lieu de 512), avec mipmaps : les petits traits forment une brume granuleuse, sans la trame de hachures visible auparavant.
+- Plaques d'écume retournées au hasard horizontalement et verticalement, pour que leurs traits ne s'alignent pas.
+- Débits d'écume calculés à la vitesse de jeu de référence de l'ancien jeu (2 unités/s) composée avec la vitesse latérale, indépendamment du défilement réel de la mer (ralenti en 0.12.1) : le sillage redevient un ruban continu et les embruns enveloppent la coque.
+- Opacité de l'écume recalée sur la capture : 0,25 (zones claires du sillage +62, +90, +88 sur 255, contre +62, +93, +92 dans l'ancien jeu).
+- Tests unitaires : débits à la vitesse de référence, retournements aléatoires.
+- README : rendu de l'écume.
+
+### Notes
+- Cadence du profil mobile en rendu logiciel (Chromium sans GPU) : 12 à 16 images par seconde ; à mesurer sur un vrai téléphone.
+
 ## [0.12.1] — 2026-10-15 — Défilement de la mer deux fois plus lent
 
 ### Changed
@@ -311,3 +324,6 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `2026-10-15 | Capture de l'ancien jeu fournie (HammerAndPlanks 2014-12-03 11-12-25-95.png) | (référence de calage, aucun fichier ajouté au dépôt)`
 - `2026-10-15 | Écume bien meilleure, mais défilement de la mer au moins deux fois trop rapide | game/src/main/kotlin/.../launch/LaunchAnimation.kt, game/src/test/kotlin/.../launch/LaunchAnimationTest.kt, README.md, CHANGELOG.md, package.json`
   - En tant que joueur, je veux une mer qui défile calmement, afin d'apprécier la navigation sans impression de précipitation.
+- `2026-10-15 | La capture a-t-elle servi pour l'écume ? Peut-on encore s'en approcher ? (analyse : oui, quatre pistes) | (aucun fichier modifié)`
+- `2026-10-15 | Lancement des quatre pistes pour rapprocher l'écume de la capture | assets/fx/foam.png, game/src/main/kotlin/.../fx/*, game/src/test/kotlin/.../fx/*, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux un sillage et des embruns semblables à ceux de l'ancien jeu, afin de retrouver son rendu.

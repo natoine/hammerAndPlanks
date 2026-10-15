@@ -25,6 +25,8 @@ class FoamParticles(
         var vx = 0f; var vy = 0f
         var age = 0f; var life = 1f
         var size = 1f; var rotationDeg = 0f
+        /** Plaque retournée au hasard : les traits de la planche ne s'alignent pas d'une plaque à l'autre. */
+        var flipX = false; var flipY = false
         var alive = false
     }
 
@@ -74,6 +76,8 @@ class FoamParticles(
             p.life = life * (0.8f + 0.4f * random.nextFloat())
             p.size = size * (0.8f + 0.4f * random.nextFloat())
             p.rotationDeg = rotationDeg
+            p.flipX = random.nextBoolean()
+            p.flipY = random.nextBoolean()
             p.alive = true
         }
     }
