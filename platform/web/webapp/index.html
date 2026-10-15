@@ -12,6 +12,8 @@
     /* Lisible par les lecteurs d'écran, invisible à l'écran. */
     /* Retour caméra posé par-dessus le canvas, placé par le jeu (window.hapCamera.place). Effet miroir. */
     #camera-thumbnail { position: fixed; display: none; object-fit: cover; transform: scaleX(-1); pointer-events: none; background: #0a1429; }
+    /* Halo autour du joueur suivi, posé exactement sur la vidéo, en miroir comme elle. */
+    #camera-halo { position: fixed; display: none; transform: scaleX(-1); pointer-events: none; opacity: 0.55; }
     .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   </style>
 </head>
@@ -42,14 +44,18 @@
 
     // Caméra à la demande : getUserMedia seulement au passage en mode caméra, flux coupé dès qu'on en sort.
     window.hapCamera = (function () {
-      var status = "OFF", stream = null, video = null, wanted = false, placement = null;
+      var status = "OFF", stream = null, video = null, halo = null, wanted = false, placement = null;
+      function place(el) {
+        el.style.left = placement[0] * 100 + "%";
+        el.style.top = placement[1] * 100 + "%";
+        el.style.width = placement[2] * 100 + "%";
+        el.style.height = placement[3] * 100 + "%";
+        el.style.borderRadius = Math.round(placement[2] * window.innerWidth * 0.05) + "px";
+      }
       function applyPlacement() {
-        if (!video || !placement) return;
-        video.style.left = placement[0] * 100 + "%";
-        video.style.top = placement[1] * 100 + "%";
-        video.style.width = placement[2] * 100 + "%";
-        video.style.height = placement[3] * 100 + "%";
-        video.style.borderRadius = Math.round(placement[2] * window.innerWidth * 0.05) + "px";
+        if (!placement) return;
+        if (video) place(video);
+        if (halo) place(halo);
       }
       function element() {
         if (!video) {
@@ -60,6 +66,10 @@
           video.autoplay = true;
           video.setAttribute("aria-hidden", "true");
           document.body.appendChild(video);
+          halo = document.createElement("canvas");
+          halo.id = "camera-halo";
+          halo.setAttribute("aria-hidden", "true");
+          document.body.appendChild(halo);
           applyPlacement();
         }
         return video;
@@ -79,6 +89,7 @@
               var v = element();
               v.srcObject = s;
               v.style.display = "block";
+              halo.style.display = "block";
               return v.play().then(function () { if (wanted) status = "LIVE"; });
             })
             .catch(function (e) {
@@ -90,12 +101,59 @@
           wanted = false;
           if (stream) { release(stream); stream = null; }
           if (video) { video.srcObject = null; video.style.display = "none"; }
+          if (halo) { halo.style.display = "none"; window.hapHalo.clear(); }
           status = "OFF";
         },
         // Mémorise la zone ; l'élément vidéo n'est créé qu'au démarrage de la caméra.
         place: function (left, top, width, height) {
           placement = [left, top, width, height];
           applyPlacement();
+        }
+      };
+    })();
+
+    // Halo autour du joueur suivi (forme calculée en Kotlin, PlayerHalo) : capsules élargies et floutées,
+    // intérieur effacé, en coordonnées de l'image caméra ramenées à l'imagette (recadrage « cover »).
+    window.hapHalo = (function () {
+      var clearTimer = null;
+      function canvas() { return document.getElementById("camera-halo"); }
+      function clear() {
+        var c = canvas();
+        if (c) c.getContext("2d").clearRect(0, 0, c.width, c.height);
+      }
+      return {
+        clear: clear,
+        draw: function (encoded) {
+          var c = canvas();
+          if (!c || c.style.display === "none") return;
+          var rect = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+          var cw = Math.max(1, Math.round(rect.width * dpr)), ch = Math.max(1, Math.round(rect.height * dpr));
+          if (c.width !== cw || c.height !== ch) { c.width = cw; c.height = ch; }
+          var parts = encoded.split(";"), head = parts[0].split(",").map(Number);
+          var iw = head[0], ih = head[1], haloWidth = head[2];
+          var scale = Math.max(cw / iw, ch / ih), ox = (cw - iw * scale) / 2, oy = (ch - ih * scale) / 2;
+          var strokes = parts.slice(1).map(function (p) { return p.split(",").map(Number); });
+          var ctx = c.getContext("2d");
+          ctx.clearRect(0, 0, cw, ch);
+          ctx.lineCap = "round";
+          function capsules(extra, color) {
+            ctx.strokeStyle = color; ctx.fillStyle = color;
+            strokes.forEach(function (s) {
+              var x1 = ox + s[0] * scale, y1 = oy + s[1] * scale, x2 = ox + s[2] * scale, y2 = oy + s[3] * scale;
+              var r = (s[4] + extra) * scale;
+              if (x1 === x2 && y1 === y2) { ctx.beginPath(); ctx.arc(x1, y1, r, 0, 2 * Math.PI); ctx.fill(); }
+              else { ctx.lineWidth = 2 * r; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+            });
+          }
+          ctx.globalCompositeOperation = "source-over";
+          ctx.filter = "blur(" + Math.max(1, haloWidth * scale * 0.4) + "px)";
+          capsules(haloWidth, "rgb(255, 217, 89)"); // doré (PlayerHalo.COLOR)
+          ctx.filter = "none";
+          ctx.globalCompositeOperation = "destination-out";
+          capsules(0, "#000");
+          ctx.globalCompositeOperation = "source-over";
+          clearTimeout(clearTimer);
+          clearTimer = setTimeout(clear, 500); // pose périmée : plus de halo
         }
       };
     })();

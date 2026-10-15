@@ -26,6 +26,12 @@ class DesktopCamera : CameraThumbnail {
     private val latestForPose = AtomicReference<Frame?>(null)
     private var nextId = 0L
 
+    /**
+     * Forme du joueur à entourer d'un halo dans l'image affichée (null : pas de halo). L'image analysée par
+     * InstantHMR ([peekFrame]) reste intacte, sans halo.
+     */
+    @Volatile var haloShape: (() -> com.naturalpad.hammerandplanks.pose.HaloShape?)? = null
+
     /** Dernière image capturée, sans la consommer (lue par l'estimation de pose, sur son propre thread). */
     fun peekFrame(): Frame? = latestForPose.get()
     @Volatile private var running = false
@@ -64,8 +70,12 @@ class DesktopCamera : CameraThumbnail {
                 val size = webcam.viewSize
                 val bytes = ByteArray(buffer.remaining()).also { buffer.get(it) }
                 val frame = Frame(size.width, size.height, bytes, nextId++, System.nanoTime() / 1e9)
-                latest.set(frame)
                 latestForPose.set(frame)
+                val shape = haloShape?.invoke()
+                latest.set(
+                    if (shape == null) frame
+                    else Frame(size.width, size.height, HaloCompositor.compose(bytes, size.width, size.height, shape), frame.id, frame.timestampS),
+                )
                 status = CameraStatus.LIVE
             }
         } catch (e: Exception) {

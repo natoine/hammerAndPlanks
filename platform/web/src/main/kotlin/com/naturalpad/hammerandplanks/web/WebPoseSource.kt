@@ -1,6 +1,7 @@
 package com.naturalpad.hammerandplanks.web
 
 import com.naturalpad.hammerandplanks.pose.Mhr70
+import com.naturalpad.hammerandplanks.pose.PlayerHalo
 import com.naturalpad.hammerandplanks.pose.PoseFrame
 import com.naturalpad.hammerandplanks.pose.PoseSource
 import com.naturalpad.hammerandplanks.pose.PoseStatus
@@ -25,6 +26,8 @@ class WebPoseSource : PoseSource {
                 imageHeight = poseHeight(),
                 timestampS = time,
             )
+            // Nouvelle pose : halo autour du joueur suivi dans l'imagette.
+            cached?.let(PlayerHalo::shape)?.let { haloDraw(PlayerHalo.encode(it)) }
         }
         return cached
     }
@@ -35,6 +38,7 @@ class WebPoseSource : PoseSource {
 
     override fun stop() {
         poseStop()
+        haloClear()
         cached = null
         cachedTime = -1.0
     }

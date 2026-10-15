@@ -93,3 +93,10 @@ external fun poseHeight(): Int
         "if (document.getElementById('motion-status')) { document.getElementById('motion-status').textContent = text; }",
 )
 external fun reportMotionStatus(status: String, text: String)
+
+/** Dessine le halo du joueur sur l'imagette (forme encodée par PlayerHalo.encode). */
+@JSBody(params = ["encoded"], script = "if (window.hapHalo) { window.hapHalo.draw(encoded); }")
+external fun haloDraw(encoded: String)
+
+@JSBody(script = "if (window.hapHalo) { window.hapHalo.clear(); }")
+external fun haloClear()

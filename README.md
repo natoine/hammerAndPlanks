@@ -226,6 +226,8 @@ Providers ONNX Runtime à tester dans l'ordre : QNN (Snapdragon), NNAPI (dépré
 NPU : formes statiques et quantification (fp16 ou int8) souvent requises ; les opérations non supportées retombent sur CPU/GPU. Benchmarker sur 3 ou 4 téléphones (Snapdragon, Tensor, Exynos, entrée de gamme).
 Cadrage : un joueur à 50 cm d'un téléphone est surtout visible en buste. Tester le modèle sur du cadrage haut du corps.
 Thermique et batterie : plafonner l'inférence à 15-20 Hz avec interpolation.
+Halo du joueur (0.13.0) : dans l'imagette du retour caméra, un liseré doré léger entoure la silhouette de la personne suivie par InstantHMR, pour voir qui pilote quand plusieurs personnes sont devant la caméra. InstantHMR ne donne pas de contour : PlayerHalo (:pose) approche la silhouette par des capsules posées sur les articulations du haut du corps (tête, cou, tronc, épaules, bras), dimensionnées sur la largeur des épaules ; chaque plateforme dessine ces capsules élargies et floutées puis efface l'intérieur (desktop : Java2D sur une copie de l'image affichée, l'image analysée reste intacte ; web : canvas posé sur la vidéo ; Android : vue posée sur la PreviewView). Le halo suit le miroir et le recadrage de l'imagette, et s'efface si la pose a plus de 0,5 s.
+
 Mesures (0.8.0, modèle publié fp16, une personne, image 640×480, prétraitement compris) :
 - PC de développement (Linux, processeur x86-64), ONNX Runtime Java 1.31 CPU, 4 threads : environ 50 ms par image ; plafonné à 20 Hz.
 - Chromium sans GPU (tests Playwright), onnxruntime-web 1.30 WebAssembly : environ 190 ms par image avec plusieurs threads (page isolée COOP/COEP), 450 ms sur un seul thread.

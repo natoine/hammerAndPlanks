@@ -5,6 +5,7 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.camera.core.ImageProxy
 import com.naturalpad.hammerandplanks.pose.ImageRotation
+import com.naturalpad.hammerandplanks.pose.PlayerHalo
 import com.naturalpad.hammerandplanks.pose.PoseEstimator
 import com.naturalpad.hammerandplanks.pose.PoseFrame
 import com.naturalpad.hammerandplanks.pose.PoseSource
@@ -62,8 +63,10 @@ class AndroidPoseSource(private val context: Context, private val camera: Androi
             )
             rgbBuffer = upright.pixels
             val timestamp = image.imageInfo.timestamp / 1e9 // même horloge que elapsedRealtimeNanos
-            latest.set(pose.estimate(upright.pixels, upright.width, upright.height, timestamp))
+            val frame = pose.estimate(upright.pixels, upright.width, upright.height, timestamp)
+            latest.set(frame)
             status = PoseStatus.RUNNING
+            camera.showHalo(PlayerHalo.shape(frame)) // halo autour du joueur suivi dans l'aperçu
         } catch (e: Exception) {
             Log.e(TAG, "Inférence impossible", e)
             status = PoseStatus.ERROR
