@@ -40,6 +40,12 @@ class AndroidCamera(private val activity: Activity, private val root: FrameLayou
     /** Reçoit les images d'analyse (RGBA, non miroir) sur un fil dédié ; null si personne ne les lit. */
     @Volatile var frameConsumer: ((androidx.camera.core.ImageProxy) -> Unit)? = null
     private var previewView: PreviewView? = null
+    private var haloView: HaloView? = null
+
+    /** Halo autour du joueur suivi, depuis le fil d'analyse (null : l'effacer). */
+    fun showHalo(shape: com.naturalpad.hammerandplanks.pose.HaloShape?) {
+        haloView?.update(shape)
+    }
     private var placement = floatArrayOf(0f, 0f, 0f, 0f)
 
     override fun start() = activity.runOnUiThread {
@@ -65,6 +71,11 @@ class AndroidCamera(private val activity: Activity, private val root: FrameLayou
         status = CameraStatus.STARTING
         val view = previewView ?: createPreviewView().also { previewView = it }
         view.visibility = View.VISIBLE
+        val halo = haloView ?: HaloView(activity).also {
+            haloView = it
+            root.addView(it, FrameLayout.LayoutParams(1, 1)) // au-dessus de l'aperçu
+        }
+        halo.visibility = View.VISIBLE
         applyPlacement()
         val future = ProcessCameraProvider.getInstance(activity)
         future.addListener({
@@ -124,6 +135,8 @@ class AndroidCamera(private val activity: Activity, private val root: FrameLayou
         }
         registry.currentState = Lifecycle.State.CREATED
         previewView?.visibility = View.GONE
+        haloView?.update(null)
+        haloView?.visibility = View.GONE
         status = CameraStatus.OFF
     }
 
@@ -139,11 +152,13 @@ class AndroidCamera(private val activity: Activity, private val root: FrameLayou
             return
         }
         val (left, top, width, height) = placement
-        view.layoutParams = FrameLayout.LayoutParams((width * root.width).toInt(), (height * root.height).toInt()).apply {
+        fun params() = FrameLayout.LayoutParams((width * root.width).toInt(), (height * root.height).toInt()).apply {
             leftMargin = (left * root.width).toInt()
             topMargin = (top * root.height).toInt()
         }
+        view.layoutParams = params()
         view.invalidateOutline()
+        haloView?.layoutParams = params()
     }
 
     companion object {

@@ -7,7 +7,9 @@ import com.naturalpad.hammerandplanks.PlatformHooks
 import com.naturalpad.hammerandplanks.gestures.MotionSteering
 import com.naturalpad.hammerandplanks.gestures.PoseMotionInput
 import com.naturalpad.hammerandplanks.gestures.TiltSource
+import com.naturalpad.hammerandplanks.pose.PlayerHalo
 import java.io.File
+
 import java.util.Locale
 
 /**
@@ -27,6 +29,10 @@ fun main(args: Array<String>) {
     val poseSource = DesktopPoseSource(webcam, modelFile)
     val motionInput = PoseMotionInput(poseSource, MotionSteering(source = tilt))
     if (options.debugPose) startPoseDebugLog(motionInput, poseSource)
+    // Halo autour du joueur suivi dans l'imagette, tant que sa pose est récente.
+    webcam.haloShape = {
+        poseSource.latest()?.takeIf { poseSource.nowS() - it.timestampS < HALO_MAX_AGE_S }?.let(PlayerHalo::shape)
+    }
     val hooks = object : PlatformHooks {
         override val preferredLanguageTag: String = forcedLanguage ?: Locale.getDefault().toLanguageTag()
         override val gamepads = DesktopGamepads()
@@ -70,3 +76,6 @@ private fun startPoseDebugLog(motion: PoseMotionInput, poses: DesktopPoseSource)
         }
     }
 }
+
+/** Au-delà, la pose est trop ancienne pour placer le halo (personne sortie, estimation arrêtée). */
+private const val HALO_MAX_AGE_S = 0.5

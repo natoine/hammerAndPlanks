@@ -8,6 +8,20 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.13.0] — 2026-10-15 — Halo autour du joueur dans le retour caméra
+
+### Added
+- Mode caméra : un liseré doré léger entoure la silhouette du joueur suivi dans l'imagette, pour identifier qui pilote quand plusieurs personnes sont devant la caméra. Desktop, Android et web.
+- `PlayerHalo` (module `:pose`) : silhouette approchée par des capsules posées sur les articulations du haut du corps (tête, cou, tronc, épaules, bras), proportionnées à la largeur des épaules ; couleur dorée des halos de bonus de l'ancien jeu ; sérialisation pour le web.
+- Desktop : `HaloCompositor` (Java2D) dessine le halo sur une copie de l'image affichée ; l'image analysée par InstantHMR reste intacte.
+- Web : canvas `#camera-halo` posé exactement sur la vidéo, en miroir comme elle (`window.hapHalo`), alimenté par Kotlin à chaque nouvelle pose.
+- Android : `HaloView` posée sur la PreviewView (flou natif, miroir de la caméra frontale, recadrage identique).
+- Le halo s'efface quand la pose a plus de 0,5 s ou qu'on quitte le mode caméra.
+- Tests : forme du halo (unitaires), composition desktop (liseré doré, intérieur et extérieur intacts, image d'origine non modifiée), Playwright (halo doré visible, intérieur épargné, posé exactement sur la vidéo en miroir, effacé hors mode caméra).
+
+### Changed
+- README : halo du joueur.
+
 ## [0.12.2] — 2026-10-15 — Écume plus proche de la capture de l'ancien jeu
 
 ### Changed
@@ -327,3 +341,5 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 - `2026-10-15 | La capture a-t-elle servi pour l'écume ? Peut-on encore s'en approcher ? (analyse : oui, quatre pistes) | (aucun fichier modifié)`
 - `2026-10-15 | Lancement des quatre pistes pour rapprocher l'écume de la capture | assets/fx/foam.png, game/src/main/kotlin/.../fx/*, game/src/test/kotlin/.../fx/*, README.md, CHANGELOG.md, package.json`
   - En tant que joueur, je veux un sillage et des embruns semblables à ceux de l'ancien jeu, afin de retrouver son rendu.
+- `2026-10-15 | Léger halo autour de la silhouette du joueur dans le retour caméra, pour identifier qui joue s'il y a plusieurs personnes | pose/src/main/kotlin/.../PlayerHalo.kt, pose/src/test/kotlin/.../PlayerHaloTest.kt, platform/desktop/src/main/kotlin/.../HaloCompositor.kt, platform/desktop/src/main/kotlin/.../DesktopCamera.kt, platform/desktop/src/main/kotlin/.../DesktopLauncher.kt, platform/desktop/src/test/kotlin/.../HaloCompositorTest.kt, platform/android/src/main/kotlin/.../HaloView.kt, platform/android/src/main/kotlin/.../AndroidCamera.kt, platform/android/src/main/kotlin/.../AndroidPoseSource.kt, platform/web/webapp/index.html, platform/web/src/main/kotlin/.../*, e2e/camera-halo.spec.ts, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux voir un halo autour de ma silhouette dans le retour caméra, afin de savoir que c'est bien moi qui pilote quand d'autres personnes sont devant la caméra.
