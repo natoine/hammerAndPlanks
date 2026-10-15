@@ -8,6 +8,50 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.12.1] — 2026-10-15 — Défilement de la mer deux fois plus lent
+
+### Changed
+- Mer : défilement divisé par deux, 1 unité de l'ancien jeu par seconde au lieu de 2 (0,4 longueur de bateau par seconde au lieu de 0,8), jugé deux fois trop rapide. Le sillage est un peu plus court et l'écume un peu moins abondante (son débit suit la vitesse). Constante renommée `SEA_SCROLL_SPEED`.
+- README : vitesse de défilement.
+
+## [0.12.0] — 2026-10-15 — Rendu calé sur l'ancien jeu : mer, écume et sillage
+
+### Added
+- Référence visuelle : capture de l'ancien jeu fournie (2014-12-03), utilisée pour caler couleurs et intensités par mesure.
+- Écume pilotée comme par l'ancien script TrailAnim : débits proportionnels à la vitesse du bateau en unités de l'ancien jeu, défilement compris (sillage max(100 × vitesse, 10)/s, gerbes max(400 × vitesse, 20)/s), rafales de 50 gerbes à la fréquence 1 + 5 × vitesse.
+- Émetteurs à la position de l'ancien bateau : sillage sous le milieu de la coque sur toute sa largeur (rayon 0,45), gerbes dans une demi-sphère de rayon 0,5 autour de l'avant (vitesse 0,5 qui les écarte), tailles 0,8 et 0,5 de l'ancien jeu.
+- Étalonnage de la couleur de la mer dans le shader (`u_gradeScale`, `u_gradeOffset`) : moyenne et contraste par canal de la mer de la capture.
+- `FoamParticles.burst` (rafales) et vitesse radiale ; `LaunchAnimation.seaScrollSpeedPx`.
+- Tests unitaires : conversion de vitesse, débits minimaux, rafales, multiplication par la vitesse, position des émetteurs, vitesse de défilement, étalonnage.
+
+### Changed
+- Mer : bleu acier plus sombre, comme l'ancien jeu ; crêtes d'écume à l'intensité mesurée sur la capture (lignes bleu clair au lieu de cyan vif).
+- Mer : défilement à la vitesse minimale de l'ancien jeu (0,8 longueur de bateau par seconde, au lieu d'environ 0,2), qui étire le sillage derrière le bateau.
+- Écume : opacité calée sur la capture (voile translucide au lieu d'une traînée saturée), texture sans mipmaps pour garder le grain, traits horizontaux comme dans l'ancien jeu (retour sur la rotation de 90° de la 0.11.2 et sur le V de la 0.11.1, qui n'en venaient pas).
+- README : rendu de la mer et de l'écume.
+
+### Fixed
+- L'écume était 10 à 50 fois moins abondante que dans l'ancien jeu, où un nuage d'écume dense entourait la coque : c'était l'écart principal avec l'ancien rendu, plus que l'orientation.
+
+## [0.11.2] — 2026-10-15 — Écume tournée de 90°
+
+### Fixed
+- Écume toujours mal orientée : les plaques sont tournées de 90°. Les traits de la planche d'écume, horizontaux, deviennent parallèles à la marche du bateau (stries du sillage dans l'axe, éventail de la vague d'étrave) et suivent le cap du bateau au moment de l'émission.
+- Test unitaire : orientation des traits selon le cap.
+- README : orientation de l'écume.
+
+## [0.11.1] — 2026-10-15 — Écume orientée comme dans l'ancien jeu
+
+### Fixed
+- Écume mal orientée : les plaques d'écume étaient couchées sur l'eau et tournées au hasard (±20°). Elles reprennent maintenant les réglages de l'ancien jeu (mode « Vertical Billboard ») : panneau vertical carré tourné vers la caméra, écrasé à 53 % en hauteur (caméra plongeant de 58°), sans rotation pour le sillage, 20° pour les gerbes (en miroir de part et d'autre de la proue, pour suivre le V de la vague).
+- Sillage : il naît sur toute la largeur de la poupe (ancien cône de rayon 0,45, la demi-largeur de la coque) et forme une bande dans le passage du bateau.
+- Rendu de l'écume : mélange additif teinté du cyan de l'ancien matériau Ecume ; opacité pleine puis effacement (29 % de la vie pour le sillage, 34 % pour les gerbes, au lieu d'un fondu d'apparition) ; sillage qui grandit de 46 % à 100 % en ralentissant ; gerbes qui rétrécissent et tournent à 45°/s ; tailles ramenées à celles de l'ancien jeu (un tiers de la longueur du bateau pour le sillage, un cinquième pour les gerbes).
+
+### Changed
+- `FoamStyle` : évolution des particules au cours de leur vie (opacité, taille, rotation), une par système ; `FoamParticles.emit` accepte un segment de naissance et une rotation fixe.
+- Tests unitaires du style d'écume, du segment de naissance et de l'écrasement des panneaux.
+- README : rendu de l'écume.
+
 ## [0.11.0] — 2026-10-14 — Bateau immergé : flottaison, écume et sillage
 
 ### Added
@@ -258,3 +302,12 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que joueur, je veux voir la proue de mon bateau se tourner peu à peu vers la direction où il va, afin de sentir qu'il navigue vraiment.
 - `2026-10-14 | Le bateau semble au-dessus de l'eau et non partiellement immergé : s'inspirer de l'ancienne version | assets-src/blender/render_boat.py, assets-src/blender/test_render_boat.py, assets/boats/player/*, assets/fx/foam.png, assets-src/fx/*, game/src/main/kotlin/.../fx/*, game/src/main/kotlin/.../sea/SeaRenderer.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/test/kotlin/.../fx/*, README.md, CHANGELOG.md, package.json`
   - En tant que joueur, je veux voir mon bateau enfoncé dans l'eau, avec son écume et son sillage, afin de croire qu'il navigue vraiment.
+- `2026-10-15 | Vagues sur les côtés et sillon dans le passage réussis, mais assets d'écume mal orientés : regarder l'ancienne version | game/src/main/kotlin/.../fx/FoamParticles.kt, game/src/main/kotlin/.../fx/BoatWake.kt, game/src/test/kotlin/.../fx/*, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux que l'écume du bateau ressemble à celle de l'ancien jeu, afin que le sillage et la vague d'étrave paraissent naturels.
+- `2026-10-15 | Changement non perçu, écume toujours mal orientée : tenter une rotation de 90° | game/src/main/kotlin/.../fx/BoatWake.kt, game/src/test/kotlin/.../fx/BoatWakeTest.kt, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux des traits d'écume dans l'axe de la marche du bateau, afin que le sillage paraisse naturel.
+- `2026-10-15 | Toujours loin de l'ancien rendu : creuser l'ancien projet (shader en plus des assets ?) | game/src/main/kotlin/.../fx/*, game/src/main/kotlin/.../sea/*, game/src/main/kotlin/.../launch/LaunchAnimation.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, assets/shaders/sea.frag, game/src/test/kotlin/.../fx/*, game/src/test/kotlin/.../sea/*, game/src/test/kotlin/.../launch/LaunchAnimationTest.kt, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux retrouver le rendu de l'ancien jeu (mer, écume, sillage), afin de reconnaître son ambiance.
+- `2026-10-15 | Capture de l'ancien jeu fournie (HammerAndPlanks 2014-12-03 11-12-25-95.png) | (référence de calage, aucun fichier ajouté au dépôt)`
+- `2026-10-15 | Écume bien meilleure, mais défilement de la mer au moins deux fois trop rapide | game/src/main/kotlin/.../launch/LaunchAnimation.kt, game/src/test/kotlin/.../launch/LaunchAnimationTest.kt, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux une mer qui défile calmement, afin d'apprécier la navigation sans impression de précipitation.

@@ -40,12 +40,13 @@ class SeaRenderer(private val waves: SeaWaves = SeaWaves()) {
      * Dessine la mer sur [width] x [height] pixels à l'instant [timeS]. [batch] doit être entre begin() et end().
      * La texture couvre toute la largeur et se raccorde verticalement.
      */
-    /** Vitesse de défilement de la mer vers le bas, en pixels par seconde, pour un écran de [width] de large. */
-    fun scrollSpeedPx(width: Float): Float = LaunchAnimation.SEA_SPEED * texture.height * (width / texture.width)
-
-    fun draw(batch: SpriteBatch, width: Float, height: Float, timeS: Float) {
+    /**
+     * Dessine la mer à l'instant [timeS] (évolution des vagues), après [scrolledPx] pixels de défilement vers le bas
+     * (distance cumulée par l'écran, voir [LaunchAnimation.seaScrollSpeedPx]).
+     */
+    fun draw(batch: SpriteBatch, width: Float, height: Float, timeS: Float, scrolledPx: Float) {
         val tileHeight = texture.height * (width / texture.width)
-        val offset = LaunchAnimation.seaOffset(timeS, tileHeight)
+        val offset = LaunchAnimation.seaOffset(scrolledPx, tileHeight)
         val program = shader
         if (program == null) {
             drawTiles(batch, width, height, tileHeight, offset)
@@ -55,14 +56,16 @@ class SeaRenderer(private val waves: SeaWaves = SeaWaves()) {
         // Le shader travaille en pixels du framebuffer (gl_FragCoord), qui peuvent différer des unités logiques.
         val fbWidth = Gdx.graphics.backBufferWidth.toFloat()
         val scale = fbWidth / width
-        val scrolledPx = timeS * LaunchAnimation.SEA_SPEED * tileHeight * scale
+        val scrolledFb = scrolledPx * scale
         program.setUniformf(SeaUniforms.SCREEN_SIZE, fbWidth, Gdx.graphics.backBufferHeight.toFloat())
         program.setUniformf(SeaUniforms.TILE_HEIGHT, tileHeight * scale)
         program.setUniformf(SeaUniforms.SEA_OFFSET, offset * scale)
         program.setUniformf(SeaUniforms.NOISE_SCALE, waves.noiseScaleX, waves.noiseScaleY)
         val noiseUnit = minOf(fbWidth, Gdx.graphics.backBufferHeight.toFloat())
         program.setUniformf(SeaUniforms.NOISE_UNIT, noiseUnit)
-        program.setUniformf(SeaUniforms.NOISE_OFFSET, waves.noiseOffset(scrolledPx, noiseUnit))
+        program.setUniformf(SeaUniforms.NOISE_OFFSET, waves.noiseOffset(scrolledFb, noiseUnit))
+        program.setUniformf(SeaUniforms.GRADE_SCALE, waves.gradeScaleR, waves.gradeScaleG, waves.gradeScaleB)
+        program.setUniformf(SeaUniforms.GRADE_OFFSET, waves.gradeOffsetR, waves.gradeOffsetG, waves.gradeOffsetB)
         program.setUniformf(SeaUniforms.PHASE, waves.phase(timeS))
         program.setUniformf(SeaUniforms.OCTAVES, waves.octaves.toFloat())
         program.setUniformf(SeaUniforms.PERLIN_PARAMS, waves.lacunarity, waves.gain)
@@ -109,9 +112,11 @@ object SeaUniforms {
     const val PARALLAX_PX = "u_parallaxPx"
     const val FOAM_BAND = "u_foamBand"
     const val FOAM_COLOR = "u_foamColor"
+    const val GRADE_SCALE = "u_gradeScale"
+    const val GRADE_OFFSET = "u_gradeOffset"
 
     val ALL = listOf(
         SCREEN_SIZE, TILE_HEIGHT, SEA_OFFSET, NOISE_UNIT, NOISE_SCALE, NOISE_OFFSET, PHASE,
-        OCTAVES, PERLIN_PARAMS, PARALLAX_PX, FOAM_BAND, FOAM_COLOR,
+        OCTAVES, PERLIN_PARAMS, PARALLAX_PX, FOAM_BAND, FOAM_COLOR, GRADE_SCALE, GRADE_OFFSET,
     )
 }

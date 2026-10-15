@@ -28,6 +28,8 @@ uniform vec2 u_perlinParams;     // lacunarité, gain
 uniform float u_parallaxPx;      // amplitude du décalage de texture, en pixels
 uniform vec3 u_foamBand;         // position, largeur, lissage de la bande d'écume
 uniform vec4 u_foamColor;        // couleur de l'écume (alpha = intensité)
+uniform vec3 u_gradeScale;       // étalonnage de la texture, calé sur une capture de l'ancien jeu
+uniform vec3 u_gradeOffset;
 
 // ---------------------------------------------------------------------------------------------
 // Bruit simplex 3D. Description : Ian McEwan, Ashima Arts, et Stefan Gustavson.
@@ -128,6 +130,7 @@ void main() {
     vec2 uv = vec2(frag.x / width, fract((frag.y + u_seaOffset + shift) / u_tileHeight));
     uv.y = 1.0 - uv.y; // les textures libGDX ont l'origine en haut
     vec4 tex = texture2D(u_texture, uv);
+    tex.rgb = clamp(tex.rgb * u_gradeScale + u_gradeOffset, 0.0, 1.0);
 
     // Écume : même bande que l'ancien shader (smoothstep sur h autour de u_foamBand.x).
     float pos = u_foamBand.x;

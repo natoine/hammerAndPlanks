@@ -17,6 +17,14 @@ class SeaWavesTest {
         assertEquals(0.02f, waves.foamSmoothBand)
     }
 
+    @Test fun `etalonnage calé sur la capture de l ancien jeu`() {
+        // Gris moyen de notre texture (94, 171, 187) ramené vers la mer de la capture (81, 124, 150).
+        fun grade(v: Int, scale: Float, offset: Float) = (v / 255f * scale + offset) * 255f
+        assertEquals(81f, grade(94, waves.gradeScaleR, waves.gradeOffsetR), 2f)
+        assertEquals(124f, grade(171, waves.gradeScaleG, waves.gradeOffsetG), 2f)
+        assertEquals(150f, grade(187, waves.gradeScaleB, waves.gradeOffsetB), 2f)
+    }
+
     @Test fun `la phase avance avec le temps`() {
         assertEquals(0f, waves.phase(0f))
         assertEquals(2f, waves.phase(10f), 1e-4f)

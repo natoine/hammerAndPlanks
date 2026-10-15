@@ -24,11 +24,26 @@ data class SeaWaves(
     val foamBandPos: Float = 1f,
     val foamBandWidth: Float = 0.02f,
     val foamSmoothBand: Float = 0.02f,
-    /** Couleur de l'écume (ancien _EcumeColor) et intensité (ancien réglage cosmétique ecumeAlpha). */
-    val foamR: Float = 0.358f,
-    val foamG: Float = 0.838f,
-    val foamB: Float = 1f,
+    /**
+     * Couleur ajoutée par l'écume des crêtes. L'ancien _EcumeColor (0,358 ; 0,838 ; 1) était atténué par la
+     * transparence et l'éclairage de l'ancienne mer : valeur calée sur la capture de l'ancien jeu (crête moins mer
+     * autour : +50, +67, +68 sur 255). Intensité : ancien réglage cosmétique ecumeAlpha (1 par défaut).
+     */
+    val foamR: Float = 0.20f,
+    val foamG: Float = 0.26f,
+    val foamB: Float = 0.27f,
     val foamIntensity: Float = 1f,
+    /**
+     * Étalonnage de la couleur de la texture (avant l'écume) : couleur = texture × gradeScale + gradeOffset.
+     * Valeurs calées sur une capture de l'ancien jeu (2014-12-03) : même moyenne et même contraste par canal que
+     * sa mer, plus sombre et d'un bleu acier (l'ancienne mer était semi-transparente sur un fond sombre, et éclairée).
+     */
+    val gradeScaleR: Float = 1.08f,
+    val gradeScaleG: Float = 0.61f,
+    val gradeScaleB: Float = 0.66f,
+    val gradeOffsetR: Float = -0.080f,
+    val gradeOffsetG: Float = 0.078f,
+    val gradeOffsetB: Float = 0.104f,
 ) {
     init {
         require(octaves in 1..MAX_OCTAVES) { "octaves doit être entre 1 et $MAX_OCTAVES : $octaves" }

@@ -57,20 +57,64 @@ class FoamParticlesTest {
         }
     }
 
-    @Test fun `opacite apparait puis s efface`() {
-        val p = FoamParticles.Particle().apply { life = 1f }
-        p.age = 0f; assertEquals(0f, p.alpha)
-        p.age = 0.1f; assertEquals(0.9f, p.alpha, 1e-4f)
-        p.age = 0.5f; val mid = p.alpha
-        p.age = 0.9f; assertTrue(p.alpha < mid)
-        p.age = 1f; assertEquals(0f, p.alpha)
+    @Test fun `rotation fixee par l emetteur, sans tirage aleatoire`() {
+        val f = foam()
+        f.emit(1f, 20f, 0f, 0f, 0f, 0f, life = 10f, size = 5f, rotationDeg = 20f)
+        f.forEachAlive { assertEquals(20f, it.rotationDeg) }
+        val g = foam()
+        g.emit(1f, 20f, 0f, 0f, 0f, 0f, life = 10f, size = 5f)
+        g.forEachAlive { assertEquals(0f, it.rotationDeg) }
     }
 
-    @Test fun `la plaque s etale en vieillissant`() {
+    @Test fun `naissance le long d un segment`() {
+        val f = foam()
+        f.emit(1f, 60f, 100f, 50f, 0f, 0f, life = 10f, size = 5f, lineX = 30f, lineY = 0f)
+        var minX = Float.MAX_VALUE; var maxX = -Float.MAX_VALUE
+        f.forEachAlive {
+            assertEquals(50f, it.y, 1e-4f)
+            assertTrue(it.x in 70f..130f)
+            minX = minOf(minX, it.x); maxX = maxOf(maxX, it.x)
+        }
+        assertTrue(maxX - minX > 40f, "Répartition sur le segment : $minX à $maxX")
+    }
+
+    @Test fun `opacite pleine puis effacement selon le style`() {
+        val f = FoamParticles(style = FoamStyle(opaqueUntil = 0.3f))
+        val p = FoamParticles.Particle().apply { life = 1f }
+        p.age = 0f; assertEquals(1f, f.alphaOf(p))
+        p.age = 0.3f; assertEquals(1f, f.alphaOf(p))
+        p.age = 0.65f; assertEquals(0.5f, f.alphaOf(p), 1e-4f)
+        p.age = 1f; assertEquals(0f, f.alphaOf(p))
+    }
+
+    @Test fun `taille du sillage grandit vite puis ralentit`() {
+        val f = FoamParticles(style = FoamStyle(sizeStart = 0.46f, sizeEnd = 1f, easeOut = true))
         val p = FoamParticles.Particle().apply { life = 1f; size = 10f }
-        assertEquals(10f, p.currentSize)
-        p.age = 1f
-        assertEquals(10f * (1f + FoamParticles.GROWTH), p.currentSize, 1e-4f)
+        assertEquals(4.6f, f.sizeOf(p), 1e-4f)
+        p.age = 0.455f; assertEquals(9.1f, f.sizeOf(p), 0.1f) // ancienne courbe : 0,91 à 45 % de la vie
+        p.age = 1f; assertEquals(10f, f.sizeOf(p), 1e-4f)
+    }
+
+    @Test fun `gerbes qui retrecissent et tournent`() {
+        val f = FoamParticles(style = FoamStyle(sizeStart = 1f, sizeEnd = 0f, spinDegPerS = 45f))
+        val p = FoamParticles.Particle().apply { life = 0.5f; size = 10f; rotationDeg = 20f }
+        p.age = 0.25f
+        assertEquals(5f, f.sizeOf(p), 1e-4f)
+        assertEquals(20f + 45f * 0.25f, f.rotationOf(p), 1e-4f)
+    }
+
+    @Test fun `style invalide refuse`() {
+        assertFailsWith<IllegalArgumentException> { FoamStyle(opaqueUntil = 1f) }
+    }
+
+    @Test fun `rafale et vitesse radiale qui ecarte du centre`() {
+        val f = foam()
+        f.burst(20, 0f, 0f, 0f, 0f, life = 10f, size = 5f, spread = 10f, radialSpeed = 5f)
+        assertEquals(20, f.aliveCount)
+        val before = mutableListOf<Float>(); f.forEachAlive { before += hypot(it.x, it.y) }
+        f.update(1f)
+        val after = mutableListOf<Float>(); f.forEachAlive { after += hypot(it.x, it.y) }
+        assertTrue(after.zip(before).all { (a, b) -> a > b - 1e-3f })
     }
 
     @Test fun `debit nul aucune particule`() {

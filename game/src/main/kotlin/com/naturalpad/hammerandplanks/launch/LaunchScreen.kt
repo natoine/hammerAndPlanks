@@ -97,6 +97,8 @@ class LaunchScreen(
     private var versionFont: BitmapFont? = null
     private val glyphs = GlyphLayout()
     private var time = 0f
+    /** Distance parcourue par la mer depuis l'ouverture de l'écran, en pixels. */
+    private var seaScrolledPx = 0f
 
     override fun show() {
         Gdx.input.inputProcessor = input
@@ -187,6 +189,7 @@ class LaunchScreen(
 
     override fun render(delta: Float) {
         time += delta
+        seaScrolledPx += LaunchAnimation.seaScrollSpeedPx(layout.boatSize) * delta.coerceAtMost(0.1f)
         if (gamepadCheck.update(delta)) game.gamepadConnected = gamepadCheck.value == true
         syncCamera()
         updateBoat(delta)
@@ -206,7 +209,7 @@ class LaunchScreen(
     }
 
     private fun drawSea() {
-        sea.draw(batch, layout.width.toFloat(), layout.height.toFloat(), time)
+        sea.draw(batch, layout.width.toFloat(), layout.height.toFloat(), time, seaScrolledPx)
     }
 
     /** Le mode d'interaction donne le GameInput qui pilote le bateau : flèches, stick gauche ou inclinaison du corps. */
@@ -248,10 +251,11 @@ class LaunchScreen(
     private fun boatScreenY(): Float = layout.boatCenterY + LaunchAnimation.bobOffset(time, layout.boatSize)
 
     private fun updateWake(delta: Float) {
-        val speedRatio = boatMotion.velocity / boatMotion.momentum.maxSpeed
+        // Vitesse latérale à l'écran : vitesse de rail × demi-rail en pixels.
+        val lateralPx = boatMotion.velocity * LaunchLayout.boatLimit(layout.width, layout.boatSize, layout.margin) * layout.width
         wake.update(
             delta.coerceAtMost(0.1f), boatScreenX(), boatScreenY(), layout.boatSize, boatMotion.headingDeg,
-            speedRatio, sea.scrollSpeedPx(layout.width.toFloat()),
+            lateralPx, LaunchAnimation.seaScrollSpeedPx(layout.boatSize),
         )
     }
 
