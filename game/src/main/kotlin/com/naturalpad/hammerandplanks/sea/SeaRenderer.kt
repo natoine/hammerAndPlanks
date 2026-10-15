@@ -40,6 +40,9 @@ class SeaRenderer(private val waves: SeaWaves = SeaWaves()) {
      * Dessine la mer sur [width] x [height] pixels à l'instant [timeS]. [batch] doit être entre begin() et end().
      * La texture couvre toute la largeur et se raccorde verticalement.
      */
+    /** Vitesse de défilement de la mer vers le bas, en pixels par seconde, pour un écran de [width] de large. */
+    fun scrollSpeedPx(width: Float): Float = LaunchAnimation.SEA_SPEED * texture.height * (width / texture.width)
+
     fun draw(batch: SpriteBatch, width: Float, height: Float, timeS: Float) {
         val tileHeight = texture.height * (width / texture.width)
         val offset = LaunchAnimation.seaOffset(timeS, tileHeight)

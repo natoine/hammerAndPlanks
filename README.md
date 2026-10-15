@@ -309,13 +309,15 @@ python3 assets-src/blender/test_render_boat.py -v
 
 Options : --view top (dessus) ou 34 (caméra inclinée à 35°), --angles N pour N rotations autour de l'axe vertical (sprite sheet de virage), --size en pixels.
 
+Immersion (0.11.0) : comme dans l'ancien jeu, où la mer était un plan semi-transparent (opacité 0,745) qui recouvrait la carène, le rendu prend un tirant d'eau (`--draft 0.091`, soit le niveau de la mer de l'ancien jeu, 0,14 unité Unity au-dessus de l'origine du bateau, ramené à l'échelle de l'import) : sous la flottaison, la coque est rendue à 25 % d'opacité (`--underwater-alpha`) et le jeu dessine la mer en dessous ; une fine bande d'écume est peinte sur la coque à la flottaison (`--foam-band`). Transparence tramée et 256 échantillons EEVEE (pas de faces arrière visibles, pas de grain). En jeu, l'écume de l'ancien bateau est reprise (texture FX_boat_splash_sheet_trim réduite dans assets/fx/foam.png) : sillage à la poupe qui reste sur l'eau et dérive avec elle (ancien « Trail »), gerbes de vague d'étrave sur les deux flancs de la proue (ancien « Splash Front »), plus fournis quand le bateau va vite.
+
 Vue retenue : 3/4. Le sprite du bateau joueur est rendu en 32 orientations de 512 px (une tous les 11,25°), copiées dans assets/boats/player/boat_player_34_00.png à _31.png. L'image 00 a la proue vers le haut de l'écran. Chaque image suivante tourne de 11,25° dans le sens inverse des aiguilles d'une montre : 08 proue à gauche, 16 proue en bas, 24 proue à droite. En jeu, la proue s'oriente vers la direction du mouvement (jusqu'à 45°) : l'image la plus proche du cap est affichée (seules les 9 images de -45° à +45° sont chargées), tournée du petit reste (au plus 5,6°).
 
 ```bash
 blender -b --python assets-src/blender/render_boat.py -- \
   --hull assets-src/boats/player/Boat_player.fbx --hull-tex assets-src/boats/player/Boat_player.png \
   --sail assets-src/boats/player/Boat_player_Voile.fbx --sail-tex assets-src/boats/player/Boat_player_voile.png \
-  --view 34 --size 512 --angles 32 --out assets-src/boats/player/render/boat_player
+  --view 34 --size 512 --angles 32 --draft 0.091 --out assets-src/boats/player/render/boat_player
 cp assets-src/boats/player/render/boat_player_34_*.png assets/boats/player/
 ```
 

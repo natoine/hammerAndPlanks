@@ -8,6 +8,18 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
 
 *(aucun changement en attente)*
 
+## [0.11.0] — 2026-10-14 — Bateau immergé : flottaison, écume et sillage
+
+### Added
+- Bateau partiellement immergé, comme dans l'ancien jeu (mer semi-transparente d'opacité 0,745 sur la carène) : les 32 orientations sont rendues avec un tirant d'eau ; sous la flottaison, la coque est à 25 % d'opacité et laisse voir la mer animée par-dessus ; une fine bande d'écume marque la flottaison sur la coque.
+- Script Blender : options `--draft` (tirant d'eau), `--underwater-alpha` (opacité de la carène, 0,25 par défaut) et `--foam-band` (bande d'écume, 0,004 par défaut) ; transparence tramée (pas de faces arrière visibles) et 256 échantillons EEVEE.
+- Écume reprise de l'ancien bateau (texture `FX_boat_splash_sheet_trim`, réduite dans `assets/fx/foam.png`, source dans `assets-src/fx/`) : sillage à la poupe qui reste sur l'eau et dérive avec la mer (ancien « Trail » : vie 1,5 s, cône de 8°) et gerbes de vague d'étrave sur les deux flancs de la proue (ancien « Splash Front » : vie 0,5 s), plus fournis à grande vitesse. Repères de flottaison mesurés sur les rendus.
+- `FoamParticles` (particules d'écume, nombre borné, recyclage sans allocation) et `BoatWake` ; `SeaRenderer.scrollSpeedPx`.
+- Tests unitaires (débit, durée de vie, capacité, dérive, dispersion, opacité, étalement, repères de proue, de poupe et de flancs) et tests du script Blender (carène vue à travers l'eau, options invalides).
+
+### Changed
+- README : immersion, écume et commande de rendu avec tirant d'eau.
+
 ## [0.10.0] — 2026-10-14 — La proue s'oriente dans la direction du bateau
 
 ### Added
@@ -244,3 +256,5 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le pr
   - En tant que joueur, je veux un retour au centre nettement plus calme que l'aller, afin de sentir que c'est moi qui donne l'élan.
 - `2026-10-14 | Légère rotation progressive du bateau dans la direction où il va, la pointe orientée dans sa direction à vitesse maximale | game/src/main/kotlin/.../launch/BoatMotion.kt, game/src/main/kotlin/.../launch/BoatFrames.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/main/kotlin/.../PlatformHooks.kt, platform/web/src/main/kotlin/.../*, assets/boats/player/*, game/src/test/kotlin/.../launch/*, e2e/boat-keyboard.spec.ts, README.md, CHANGELOG.md, package.json`
   - En tant que joueur, je veux voir la proue de mon bateau se tourner peu à peu vers la direction où il va, afin de sentir qu'il navigue vraiment.
+- `2026-10-14 | Le bateau semble au-dessus de l'eau et non partiellement immergé : s'inspirer de l'ancienne version | assets-src/blender/render_boat.py, assets-src/blender/test_render_boat.py, assets/boats/player/*, assets/fx/foam.png, assets-src/fx/*, game/src/main/kotlin/.../fx/*, game/src/main/kotlin/.../sea/SeaRenderer.kt, game/src/main/kotlin/.../launch/LaunchScreen.kt, game/src/test/kotlin/.../fx/*, README.md, CHANGELOG.md, package.json`
+  - En tant que joueur, je veux voir mon bateau enfoncé dans l'eau, avec son écume et son sillage, afin de croire qu'il navigue vraiment.
