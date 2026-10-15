@@ -79,6 +79,27 @@ class RenderBoatTest(unittest.TestCase):
         res = render(BASE_ARGS + ["--angles", "0", "--out", self.out])
         self.assertNotEqual(res.returncode, 0)
 
+    def _semi_transparent_ratio(self, path):
+        """Part des pixels visibles du bateau rendus à travers l'eau (opacité entre 15 et 50 %)."""
+        alpha = Image.open(path).getchannel("A")
+        visible = [v for v in alpha.getdata() if v > 8]
+        partial = [v for v in visible if 38 <= v <= 128]
+        return len(partial) / len(visible)
+
+    def test_tirant_d_eau_carene_vue_a_travers_l_eau(self):
+        # Vue de profil (angle 1 sur 4 : 90°), où la carène sous la flottaison se voit bien.
+        dry = render(BASE_ARGS + ["--view", "34", "--size", "96", "--angles", "4", "--out", self.out + "_sec"])
+        wet = render(BASE_ARGS + ["--view", "34", "--size", "96", "--angles", "4", "--draft", "0.091", "--out", self.out])
+        self.assertEqual(dry.returncode, 0, dry.stderr)
+        self.assertEqual(wet.returncode, 0, wet.stderr)
+        before = self._semi_transparent_ratio(f"{self.out}_sec_34_01.png")
+        after = self._semi_transparent_ratio(f"{self.out}_34_01.png")
+        self.assertGreater(after, before + 0.05, f"Carène immergée : {before:.2f} -> {after:.2f}")
+
+    def test_erreur_tirant_d_eau_ou_opacite_invalides(self):
+        self.assertNotEqual(render(BASE_ARGS + ["--draft", "-1", "--out", self.out]).returncode, 0)
+        self.assertNotEqual(render(BASE_ARGS + ["--underwater-alpha", "2", "--out", self.out]).returncode, 0)
+
     def test_erreur_vue_inconnue(self):
         res = render(BASE_ARGS + ["--view", "side", "--out", self.out])
         self.assertNotEqual(res.returncode, 0)

@@ -20,6 +20,12 @@ class LaunchAnimationTest {
         }
     }
 
+    @Test fun `la mer defile a 0,4 longueur de bateau par seconde`() {
+        // 1 unité/s pour un bateau de 2,5 de long : 0,4 longueur de bateau par seconde ; le bateau fait 0,6 du sprite.
+        assertEquals(0.4f * 0.6f * 500f, LaunchAnimation.seaScrollSpeedPx(500f), 1e-3f)
+        assertEquals(2f * LaunchAnimation.seaScrollSpeedPx(250f), LaunchAnimation.seaScrollSpeedPx(500f), 1e-3f)
+    }
+
     @Test fun `tuile de hauteur nulle refusee`() {
         assertFailsWith<IllegalArgumentException> { LaunchAnimation.seaOffset(1f, 0f) }
     }

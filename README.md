@@ -281,6 +281,8 @@ Les assets de l'ancien jeu Unity (dépôt HammerAndPlanks) sont réutilisables :
 
 Mer animée
 
+Couleur et défilement calés sur une capture de l'ancien jeu (0.12.0) : la texture est étalonnée dans le shader (même moyenne et même contraste par canal que l'ancienne mer, bleu acier plus sombre : l'ancienne mer était semi-transparente sur un fond sombre et éclairée), l'écume des crêtes ajoute la couleur mesurée sur la capture (+50, +67, +68 sur 255), et la mer défile à 1 unité/s de l'ancien jeu, soit 0,4 longueur de bateau par seconde (0.12.1 : la moitié de la vitesse minimale de l'ancien jeu, jugée deux fois trop rapide), ce qui étire le sillage.
+
 La mer reprend le shader de l'ancien jeu Unity (Assets/Shaders/PerlinNormalHeight.shader) : une turbulence de bruit 3D donne une hauteur de vague qui fait onduler la texture (parallaxe) et dessine l'écume sur les crêtes ; la 3e dimension du bruit fait évoluer les vagues sur place. Portage en GLSL ES 1.0 dans assets/shaders/sea.frag (Android, iOS, desktop, WebGL 1), bruit simplex calculé dans le shader (webgl-noise, MIT). Les réglages sont dans game/.../sea/SeaWaves.kt ; ceux de l'ancien matériau sont conservés (couleur et bande d'écume, lacunarité 2, gain 0,5, phase 0,2/s). Seules différences : 4 octaves au lieu de 5 et pas d'éclairage, effet négligeable en vue de dessus. Si le shader ne compile pas sur un appareil, la mer s'affiche sans vagues (repli journalisé). Coût GPU à mesurer sur un téléphone d'entrée de gamme : le nombre d'octaves est le premier levier.
 
 Pictos de l'interface
@@ -309,13 +311,15 @@ python3 assets-src/blender/test_render_boat.py -v
 
 Options : --view top (dessus) ou 34 (caméra inclinée à 35°), --angles N pour N rotations autour de l'axe vertical (sprite sheet de virage), --size en pixels.
 
+Immersion (0.11.0) : comme dans l'ancien jeu, où la mer était un plan semi-transparent (opacité 0,745) qui recouvrait la carène, le rendu prend un tirant d'eau (`--draft 0.091`, soit le niveau de la mer de l'ancien jeu, 0,14 unité Unity au-dessus de l'origine du bateau, ramené à l'échelle de l'import) : sous la flottaison, la coque est rendue à 25 % d'opacité (`--underwater-alpha`) et le jeu dessine la mer en dessous ; une fine bande d'écume est peinte sur la coque à la flottaison (`--foam-band`). Transparence tramée et 256 échantillons EEVEE (pas de faces arrière visibles, pas de grain). En jeu, l'écume de l'ancien bateau est reprise au plus près (0.12.0), d'après le prefab PlayerBoat, le script TrailAnim et une capture de l'ancien jeu (2014-12-03) : sillage qui naît sous le milieu du bateau sur toute sa largeur et reste sur l'eau (ancien « Trail »), gerbes dans une demi-sphère autour de l'avant de la coque (ancien « Splash Front »), débits de TrailAnim (sillage max(100 × vitesse, 10)/s, gerbes max(400 × vitesse, 20)/s plus une rafale de 50 à la fréquence 1 + 5 × vitesse, vitesse en unités de l'ancien jeu, défilement compris), panneaux verticaux carrés écrasés par la plongée de 58° de l'ancienne caméra, mélange additif teinté du cyan de l'ancien matériau Ecume, opacité calée sur la capture. 0.12.2 : planche d'écume en 2048 px avec mipmaps (brume granuleuse sans trame), plaques retournées au hasard, débits calculés à la vitesse de jeu de référence de l'ancien jeu (2 unités/s) indépendamment du défilement réel de la mer, pour un sillage continu. Texture : FX_boat_splash_sheet_trim réduite à 2048 px dans assets/fx/foam.png (2048×1024).
+
 Vue retenue : 3/4. Le sprite du bateau joueur est rendu en 32 orientations de 512 px (une tous les 11,25°), copiées dans assets/boats/player/boat_player_34_00.png à _31.png. L'image 00 a la proue vers le haut de l'écran. Chaque image suivante tourne de 11,25° dans le sens inverse des aiguilles d'une montre : 08 proue à gauche, 16 proue en bas, 24 proue à droite. En jeu, la proue s'oriente vers la direction du mouvement (jusqu'à 45°) : l'image la plus proche du cap est affichée (seules les 9 images de -45° à +45° sont chargées), tournée du petit reste (au plus 5,6°).
 
 ```bash
 blender -b --python assets-src/blender/render_boat.py -- \
   --hull assets-src/boats/player/Boat_player.fbx --hull-tex assets-src/boats/player/Boat_player.png \
   --sail assets-src/boats/player/Boat_player_Voile.fbx --sail-tex assets-src/boats/player/Boat_player_voile.png \
-  --view 34 --size 512 --angles 32 --out assets-src/boats/player/render/boat_player
+  --view 34 --size 512 --angles 32 --draft 0.091 --out assets-src/boats/player/render/boat_player
 cp assets-src/boats/player/render/boat_player_34_*.png assets/boats/player/
 ```
 

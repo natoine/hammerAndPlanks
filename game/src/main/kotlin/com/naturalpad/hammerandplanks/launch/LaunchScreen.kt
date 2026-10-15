@@ -20,6 +20,7 @@ import com.naturalpad.hammerandplanks.BuildInfo
 import com.naturalpad.hammerandplanks.HammerAndPlanksGame
 import com.naturalpad.hammerandplanks.PlatformHooks
 import com.naturalpad.hammerandplanks.sea.SeaRenderer
+import com.naturalpad.hammerandplanks.fx.BoatWake
 import com.naturalpad.hammerandplanks.input.GameInput
 import com.naturalpad.hammerandplanks.input.GamepadSteering
 import com.naturalpad.hammerandplanks.input.InputMode
@@ -73,6 +74,8 @@ class LaunchScreen(
         }
     }
     private val boatMotion = BoatMotion(game.controlSettings)
+    /** Sillage et éclaboussures autour du bateau (ancien jeu : « Trail » et « Splash Front »). */
+    private val wake = BoatWake().apply { load() }
     /** Seules les orientations atteignables (cap de ±45°) sont chargées. */
     private val boatFrames: Map<Int, TextureRegion> = BoatFrames.indicesWithin(boatMotion.maxHeadingDeg).associateWith { index ->
         TextureRegion(Texture(Gdx.files.internal(BoatFrames.path(index)), true).apply {
@@ -94,6 +97,8 @@ class LaunchScreen(
     private var versionFont: BitmapFont? = null
     private val glyphs = GlyphLayout()
     private var time = 0f
+    /** Distance parcourue par la mer depuis l'ouverture de l'écran, en pixels. */
+    private var seaScrolledPx = 0f
 
     override fun show() {
         Gdx.input.inputProcessor = input
@@ -184,6 +189,7 @@ class LaunchScreen(
 
     override fun render(delta: Float) {
         time += delta
+        seaScrolledPx += LaunchAnimation.seaScrollSpeedPx(layout.boatSize) * delta.coerceAtMost(0.1f)
         if (gamepadCheck.update(delta)) game.gamepadConnected = gamepadCheck.value == true
         syncCamera()
         updateBoat(delta)
@@ -192,6 +198,8 @@ class LaunchScreen(
         batch.projectionMatrix = viewport.camera.combined
         batch.begin()
         drawSea()
+        updateWake(delta)
+        wake.draw(batch, boatScreenX(), boatScreenY(), 1f)
         drawBoat()
         drawTexts()
         val uiAlpha = LaunchAnimation.fadeIn(time, delayS = 0.2f)
@@ -201,7 +209,7 @@ class LaunchScreen(
     }
 
     private fun drawSea() {
-        sea.draw(batch, layout.width.toFloat(), layout.height.toFloat(), time)
+        sea.draw(batch, layout.width.toFloat(), layout.height.toFloat(), time, seaScrolledPx)
     }
 
     /** Le mode d'interaction donne le GameInput qui pilote le bateau : flèches, stick gauche ou inclinaison du corps. */
@@ -238,10 +246,23 @@ class LaunchScreen(
     private fun boatOffset(): Float =
         boatMotion.position * LaunchLayout.boatLimit(layout.width, layout.boatSize, layout.margin)
 
+    private fun boatScreenX(): Float = layout.boatCenterX + boatOffset() * layout.width
+
+    private fun boatScreenY(): Float = layout.boatCenterY + LaunchAnimation.bobOffset(time, layout.boatSize)
+
+    private fun updateWake(delta: Float) {
+        // Vitesse latérale à l'écran : vitesse de rail × demi-rail en pixels.
+        val lateralPx = boatMotion.velocity * LaunchLayout.boatLimit(layout.width, layout.boatSize, layout.margin) * layout.width
+        wake.update(
+            delta.coerceAtMost(0.1f), boatScreenX(), boatScreenY(), layout.boatSize, boatMotion.headingDeg,
+            lateralPx, LaunchAnimation.seaScrollSpeedPx(layout.boatSize),
+        )
+    }
+
     private fun drawBoat() {
         val size = layout.boatSize
-        val x = layout.boatCenterX + boatOffset() * layout.width
-        val y = layout.boatCenterY + LaunchAnimation.bobOffset(time, size)
+        val x = boatScreenX()
+        val y = boatScreenY()
         // Image rendue la plus proche du cap, tournée du petit reste autour de son centre.
         val heading = boatMotion.headingDeg
         val frame = boatFrames[BoatFrames.indexForHeading(heading)] ?: boatFrames.getValue(0)
@@ -284,6 +305,7 @@ class LaunchScreen(
         textGenerator.dispose()
         sea.dispose()
         boatFrames.values.forEach { it.texture.dispose() }
+        wake.dispose()
         batch.dispose()
     }
 
